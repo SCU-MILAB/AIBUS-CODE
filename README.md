@@ -1,11 +1,9 @@
 <div align="center">
 <h1>BUVFM — Breast Ultrasound Video Foundation Model</h1>
-<!-- <a href="http://arxiv.org/abs/2509.11752"><img src='https://img.shields.io/badge/arXiv-Preprint-red' alt='Paper PDF'></a> -->
-<a href='https://huggingface.co/xenosscu/BUVFM'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Weights-blue'></a>
-<a href='https://huggingface.co/datasets/xenosscu/BUVFM'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-yellow'></a>
-<a href='https://2512988161.github.io/nmODE-V-pp/'><img src='https://img.shields.io/badge/Homepage-green' alt='Homepage'></a>
+<a href='https://huggingface.co/collections/SCU-MILAB/buvfm'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Collection-blue'></a>
+<a href='https://scu-milab.github.io/BUVFM/'><img src='https://img.shields.io/badge/Homepage-green' alt='Homepage'></a>
 <a href='http://buvfm.machineilab.org/'><img src='https://img.shields.io/badge/Demopage-blue' alt='Demopage'></a>
-<a href='https://github.com/2512988161/BUVFM'><img src='https://img.shields.io/badge/Github-red' alt='Github'></a>
+<a href='https://github.com/SCU-MILAB/BUVFM-CODE'><img src='https://img.shields.io/badge/Github-red' alt='Github'></a>
 </div>
 
 BUVFM is the first breast ultrasound video foundation model, pretrained on 423K frames and 84K video sequences via self-supervised learning and fine-tuned for BI-RADS risk stratification. It powers AIBS, a cloud-edge system that enables non-physician ultrasound acquisition with real-time quality control, and achieves 95.42% macro sensitivity and 95.60% macro specificity across internal and 11 external cohorts.
