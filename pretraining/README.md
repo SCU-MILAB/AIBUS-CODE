@@ -14,10 +14,10 @@ Compared with the original V-JEPA2 implementation, this project mainly modifies 
 The key modifications are:
 
 * `src/models/nmODE.py`
-  Implements the nmODE module used in the modified predictor.
+  Reference implementation of the nmODE module (standalone MNIST demo). The actual nmODE integration (`Token_nmODE_Evolver` and `nmODE_Activation`) is defined directly in `predictor.py`.
 
 * `src/models/predictor.py`
-  Integrates nmODE into the V-JEPA2 pretraining predictor architecture.
+  Integrates nmODE into the V-JEPA2 pretraining predictor architecture. The nmODE activation replaces the default activation in all predictor blocks.
 
 * `evals/video_classification_frozen/eval.py`
   Provides the downstream full fine-tuning pipeline using pretrained weights on video classification datasets.
@@ -41,7 +41,6 @@ BUVFM/
 │   ├── models/                  # V-JEPA2 models, predictor, and nmODE module
 │   └── utils/                   # Distributed training, logging, checkpoints, schedulers
 ├── tests/                       # Unit tests
-├── requirements.txt             # Python dependencies
 ├── setup.py                     # Package setup
 └── prepare.py                   # Auto-generate CSVs, YAML configs, and shell scripts
 ```
@@ -103,8 +102,8 @@ Organize your datasets as follows:
 ```bash
 python prepare.py --model vitg \
     --pretrain_dataset /path/to/pretrain \
-    --train_dataset /path/to/finetune/train \
-    --val_dataset /path/to/finetune/val
+    --finetune_dataset_train /path/to/finetune/train \
+    --finetune_dataset_val /path/to/finetune/val
 ```
 
 **Model options:**
@@ -119,12 +118,13 @@ python prepare.py --model vitg \
 
 | Argument | Default | Description |
 |----------|---------|-------------|
+| `--devices` | `cuda:0 cuda:1 cuda:2 cuda:3` | GPU device(s) for generated shell scripts |
+| `--pretrain_mapping` | `""` | Pretrain subfolder→label mapping (e.g., `cls0:0,cls1:1`) |
+| `--finetune_mapping` | `class_0:0,class_1:1,class_2:2` | Fine-tune subfolder→label mapping |
+| `--num_classes` | 3 | Number of classification classes |
 | `--pretrain_csv` | `pretrain.csv` | Pretrain CSV filename |
 | `--train_csv` | `train.csv` | Train CSV filename |
 | `--val_csv` | `val.csv` | Validation CSV filename |
-| `--devices` | `cuda:0` | Device(s) for shell scripts |
-| `--pretrain_batch_size` | 32 | Pretrain batch size (used for ipe calculation) |
-| `--finetune_batch_size` | 16 | Fine-tune batch size |
 
 **Output structure:**
 
@@ -183,24 +183,27 @@ bash configs/vitg/finetune.sh
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `model_name` | `vit_giant_xformers` | ViT backbone variant |
-| `predictor.out_layers` | [39] | Predictor output layers |
-| `predictor.use_nmODE` | true | Enable nmODE-enhanced predictor |
-| `optimization.ipe` | 500 | Iterations per epoch (auto-calculated by prepare.py) |
-| `optimization.batch_size` | 32 | Batch size per GPU |
-| `data.num_frames` | 16 | Number of frames per clip |
+| `model.model_name` | `vit_giant_xformers` | ViT backbone variant |
+| `data.batch_size` | 32 | Batch size per GPU |
+| `data.dataset_fpcs` | [16] | Number of frames per clip |
 | `data.pin_mem` | true | Pin memory for faster data transfer |
+| `optimization.ipe` | (auto) | Iterations per epoch (auto-calculated by prepare.py as dataset_size / batch_size) |
+| `optimization.epochs` | 50 | Total training epochs |
+| `optimization.lr` | 0.00002 | Learning rate |
+
+> **Note**: nmODE activation is built into the predictor architecture and is always enabled. There is no config switch to disable it.
 
 ### Fine-Tune
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `model_name` | `vit_giant_xformers` | ViT backbone variant |
-| `classifier` | `mlp` | Classifier head type |
-| `optimization.ipe` | 100 | Iterations per epoch |
-| `optimization.batch_size` | 16 | Batch size per GPU |
-| `data.num_frames` | 16 | Number of frames per clip |
-| `evaluation.eval_every_iterations` | 100 | Evaluation frequency |
+| `model_kwargs.pretrain_kwargs.encoder.model_name` | `vit_giant_xformers` | ViT backbone variant |
+| `model_kwargs.wrapper_kwargs.out_layers` | [39] | Transformer output layers to use |
+| `experiment.classifier.num_heads` | 16 | Classifier attention heads |
+| `experiment.optimization.batch_size` | 16 | Batch size per GPU |
+| `experiment.optimization.num_epochs` | 20 | Total training epochs |
+| `experiment.data.frames_per_clip` | 16 | Number of frames per clip |
+| `experiment.data.num_classes` | 3 | Number of classification classes |
 
 ## Advanced Configuration
 
@@ -208,29 +211,29 @@ bash configs/vitg/finetune.sh
 
 Edit the following in the YAML config files:
 
-- `model_name`: Choose from `vit_giant_xformers`, `vit_large`, `vit_huge`, `vit_small`, `vit_tiny`
-- `predictor.out_layers`: Specify which transformer layers to use (e.g., [23] for ViT-Large)
-- `predictor.use_nmODE`: Enable/disable nmODE module (default: true)
+- `model.model_name` (pretrain) / `model_kwargs.pretrain_kwargs.encoder.model_name` (finetune): Choose from `vit_giant_xformers`, `vit_large`, `vit_huge`, `vit_small`, `vit_tiny`
+- `model_kwargs.wrapper_kwargs.out_layers` (finetune only): Specify which transformer layers to use (e.g., [23] for ViT-Large, [31] for ViT-Huge, [39] for ViT-Giant)
+
+> **Note**: nmODE is embedded in the predictor architecture and cannot be disabled via configuration.
 
 ### Adjust Training Parameters
 
-- `optimization.ipe`: Iterations per epoch (auto-calculated by `prepare.py` as dataset_size / batch_size)
-- `optimization.batch_size`: Batch size per GPU
-- `optimization.lr`: Learning rate
-- `optimization.warmup`: Warmup iterations
-- `data.num_frames`: Number of video frames per clip
-- `data.spatial_size`: Input spatial resolution (default: 256)
+- `optimization.ipe` (pretrain): Iterations per epoch (auto-calculated by `prepare.py` as dataset_size / batch_size)
+- `data.batch_size` (pretrain) / `experiment.optimization.batch_size` (finetune): Batch size per GPU
+- `optimization.lr` (pretrain) / `experiment.optimization.multihead_kwargs[0].lr` (finetune): Learning rate
+- `optimization.warmup` (pretrain) / `experiment.optimization.multihead_kwargs[0].warmup` (finetune): Warmup epochs
+- `data.dataset_fpcs` (pretrain) / `experiment.data.frames_per_clip` (finetune): Number of video frames per clip
+- `data.crop_size` (pretrain) / `experiment.data.resolution` (finetune): Input spatial resolution
 
 ### Data Augmentation
 
-Configure augmentation in the YAML config:
+Configure augmentation in the pretrain YAML config:
 
 ```yaml
-data:
-  color_jitter: 0.0          # Color jitter strength (0 to disable)
+data_aug:
+  auto_augment: false            # Enable auto augmentation
   random_resize_scale: [0.3, 1.0]  # Random crop scale range
-  reprob: 0.0                # Random erasing probability
-  use_random_erasing: false  # Enable random erasing augmentation
+  reprob: 0.0                   # Random erasing probability
 ```
 
 ## Troubleshooting
@@ -263,10 +266,8 @@ If you use this code in your research, please cite:
 ```
 
 ## License
-
 This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
 
 ## Acknowledgments
-
 - [V-JEPA2](https://github.com/facebookresearch/vjepa2) for the base pretraining framework
-- [nmODE](https://github.com/2512988161/nmODE-V-pp) for the neural ODE module
+

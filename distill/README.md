@@ -197,11 +197,10 @@ python distill/quality_con.py \
 |---|---|---|
 | `--input_folder` | (required) | Video directory (recursive scan) |
 | `--yolo_model_path` | distilled.pt | Distilled YOLO detector |
-| `--svm_model_path` | ckpt path | Distilled MobileNetV3 classifier |
+| `--svm_model_path` | best_finetune_distilled.pt | Distilled MobileNetV3 classifier |
 | `--num_gpus` | 4 | Number of GPUs |
 | `--batch_size` | 16 | Batch size per worker |
 | `--yolo_conf_threshold` | 0.5 | YOLO confidence threshold |
 | `--consecutive_frames` | 8 | Consecutive frames to trigger clip save |
-| `--output_json_name` | output/QC/... | Final aggregated JSON |
-| `--clip_save_dir` | output/QC/... | Extracted clips directory |
-| `--video_output_dir` | (empty) | Optional annotated video output |
+| `--output_json_name` | output/QC/out.json | Final aggregated JSON |
+| `--clip_save_dir` | (auto from threshold) | Extracted clips directory |

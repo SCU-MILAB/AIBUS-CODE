@@ -80,7 +80,7 @@ def parse_args():
     # --- 模型路径 ---
     model = parser.add_argument_group("Model paths")
     model.add_argument("--yolo_model_path",type=str,default="./distill/det/output/ckpts/distilled.pt",help="YOLO distilled model path",    )
-    model.add_argument( "--svm_model_path", type=str, default="./distill/cls/output/ckpts/mobilenetv3_small_075_yl_241222.pth", help="SVM (MobileNetV3) model path",    )
+    model.add_argument( "--svm_model_path", type=str, default="./distill/cls/output/ckpts/best_finetune_distilled.pt", help="MobileNetV3 classifier model path",    )
 
     # --- 硬件参数 ---
     hw = parser.add_argument_group("Hardware")

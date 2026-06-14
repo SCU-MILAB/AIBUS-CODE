@@ -186,13 +186,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="VJEPA Video Inference (DDP)")
     parser.add_argument("--checkpoint", type=str,
-                        default="/home/lx/baselines/vjepa/ckpts/vjepa_full/best_vjepa_model9720.pt",
+                        default="./ckpts/vjepa_full/best_vjepa_model.pt",
                         help="Path to model checkpoint")
     parser.add_argument("--output", type=str,
-                        default="./output/maee1_huigu.csv",
-                        help="OUT CSV PATH")
+                        default="./output/inference_results.csv",
+                        help="Output CSV path")
     parser.add_argument("--val_dir", type=str, nargs="+",
-                        default=["/home/lx/alg/videos_val", "/home/lx/alg/videos_test"],
+                        default=["./dataset/videos_val"],
                         help="Validation video directories")
     parser.add_argument('--model_name', type=str, default='vit_giant_xformers',
                         help="模型名，目前支持vit_giant_xformers、vit_large、vit_huge")

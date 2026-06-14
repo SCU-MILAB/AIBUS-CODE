@@ -114,6 +114,196 @@ See [Inference & Evaluation](#inference--evaluation) for more options.
 
 </details>
 
+## Minimal Reproduction Steps
+<details>
+<summary>Show/Hide</summary>
+
+Minimal Reproduction Steps to reproduce the train/inference pipeline in our paper.
+### Task 1 : Source code、demo dataset and model weight Downloading / Prepare Environment
+```bash
+# ============================================================
+# Step 1. Download source code
+# ============================================================
+git clone https://github.com/2512988161/BUVFM.git && cd BUVFM/
+
+# ============================================================
+# Step 2. Download demo dataset & model weight from HuggingFace
+# ============================================================
+export HF_ENDPOINT=https://hf-mirror.com
+HF_TOKEN=your_huggingface_api_key python download_dataset_ckpt.py 
+
+# ============================================================
+# Step 3. Prepare Environment
+# ============================================================
+conda create -n buvfm python=3.10.9 -y
+conda activate buvfm
+pip install -r requirements.txt
+```
+### Task 2: BUVFM Pretraining Full Pipeline
+```bash
+# ============================================================
+# Step 1. Enter pretraining directory
+# ============================================================
+cd pretraining/
+
+# ============================================================
+# Step 2. Download V-JEPA2 ViT-Giant pretrained weights
+#   Place under configs/vitg/ as required by prepare.py
+# ============================================================
+mkdir -p configs/vitg
+wget https://dl.fbaipublicfiles.com/vjepa2/vjepa2-vitg16-256-c4800.pt -O configs/vitg/vitg.pt
+
+# ============================================================
+# Step 3. Generate CSV manifests, YAML configs, and launch scripts
+#   Outputs: configs/vitg/{pretrain.csv, train.csv, val.csv,
+#            pretrain.yaml, finetune.yaml, pretrain.sh, finetune.sh}
+# ============================================================
+python prepare.py --model vitg \
+    --pretrain_dataset ../dataset/videos_train \
+    --finetune_dataset_train ../dataset/videos_train \
+    --finetune_dataset_val ../dataset/videos_val
+
+# ============================================================
+# Step 4. Self-supervised pretraining (V-JEPA2 with nmODE)
+#   Checkpoint saved to: outputs/vitg/pretrain/latest.pt
+# ============================================================
+bash configs/vitg/pretrain.sh
+
+# ============================================================
+# Step 5. Fine-tune on video classification (frozen evaluation)
+#   Uses pretrain output (outputs/vitg/pretrain/latest.pt) as
+#   starting point, configured automatically in finetune.yaml
+# ============================================================
+bash configs/vitg/finetune.sh
+
+cd ..
+```
+### Task 3: BUVFM Risk Stratification Fine-tune Pipeline
+```bash
+# ============================================================
+# Step 1. Fine-tune the pretrained model on BI-RADS classification
+#   Uses the downloaded nmODE-pretrained ViT-Giant checkpoint
+#   Output checkpoint: ./ckpts/vjepa_full/best_vjepa_model.pt
+#   Output log: ./output/logs_vjepa/vjepa_full.log
+# optional weights:
+#    Task 2 output
+#    ./pretraining/outputs/vitg/pretrain/latest.pt 
+#    ./pretraining/outputs/vitg/finetune/video_classification_finetuned/ultrasound_vjepa2_ALL_finetune/latest.pt
+#    BUVFM: 
+#     ./ckpts/vjepa-nmode-pretrain.pt
+#     ./ckpts/vjepa_full/best_vjepa_model9639(paper).pt
+# ============================================================
+torchrun --nproc_per_node=4 train.py \
+    --pretrained_ckpt ./ckpts/vjepa-nmode-pretrain.pt \
+    --train_dir ./dataset/videos_train \
+    --val_dir ./dataset/videos_val \
+    --batch_size 16 \
+    --lr 5e-5 \
+    --exp_name reproduction \
+    --epochs 50
+
+# ============================================================
+# Step 2. Evaluate on validation set
+#   Output: ./output/results.csv (per-video predictions)
+# ============================================================
+export CKPT=$(ls -1 ./ckpts/vjepa_full_reproduction/best_vjepa_model* | sort | tail -n 1)
+torchrun --master_port=29599 --nproc_per_node=4 inference_ddp_old.py \
+    --val_dir ./dataset/videos_val \
+    --checkpoint $CKPT \
+    --output ./output/results.csv \
+    --frame_step 2 --frames_per_clip 16
+```
+### Task 4: QC Models Distilling Full Pipeline
+```bash
+# ============================================================
+# Step 1. CLS Distillation — Feature alignment (ViT-G → MobileNetV3)
+#   Teacher: paper-reported fine-tuned ViT-Giant checkpoint
+#   Student: MobileNetV3-Small backbone
+#   Output: distill/cls/output/ckpts/best_distill.pt
+# ============================================================
+export CKPT=$(ls -1 ./ckpts/vjepa_full_reproduction/best_vjepa_model* | sort | tail -n 1)
+# or using BUVFM './ckpts/vjepa_full/best_vjepa_model9639(paper).pt'
+torchrun --nproc_per_node=4 distill/cls/distill.py \
+    --teacher_ckpt $CKPT \
+    --video_dir ./dataset/videos_train \
+    --batch_size 40 --epochs 50
+
+# ============================================================
+# Step 2. CLS Fine-tuning — 2D image classification
+#   Requires a 2-class ImageFolder dataset (class_0/class_1 with images)
+#   distill/cls/output/ckpts/best_distill.pt or distill/cls/output/distill/best_distill.pt  
+#   Output: distill/cls/output/ft-distill/best_finetune_distilled.pt
+# ============================================================
+export clsdataroot=/path/to/2cls_classification
+torchrun --nproc_per_node=4 distill/cls/finetune.py \
+    --distilled_ckpt distill/cls/output/distill/best_distill.pt \
+    --train_dir $clsdataroot/train \
+    --output_dir distill/cls/output/ft-distill \
+    --epochs 200 --batch_size 512
+export CLSCKPT=$(ls -1 ./distill/cls/output/ft-distill/best_finetune* | sort | tail -n 1)
+python distill/cls/infer.py --model_path $CLSCKPT --data_dir $clsdataroot/val --output_csv distill/cls/output/predictions.csv
+
+# ============================================================
+# Step 3. DET Distillation — Feature alignment (ViT-G → YOLO11m)
+#   Requires YOLO-format dataset with data.yaml
+#   Output: runs/detect/distill/train/
+# ============================================================
+PYTHONPATH=$(pwd) python distill/det/train.py \
+    --teacher_ckpt $CKPT \
+    --data /path/to/data.yaml \
+    --model yolo11m.pt --imgsz 256 --batch 256 --epochs 100 \
+    --output_dir distill/det/output/distill \
+    --device 0,1,2,3
+
+export modelpath=runs/detect/distill/train/weights/best.pt
+# or using our : distill/det/output/ckpts/distilled.pt
+export infername="distilled"
+export detdataroot=/root/path/to/yolo/dataset
+python distill/det/infer.py --model_path $modelpath  --output distill/det/output/infer/${infername}  --data_dir $detdataroot/images/val2017/  --label_dir $detdataroot/labels/val2017/ --conf 0.25 --imgsz 640
+```
+### Task 5: QC Full Pipeline
+```bash
+# ============================================================
+# Step 1. Configure paths and runtime environment
+#  $clipsave: Directory for saving quality-controlled video clips
+#  $inputfolder: Input video directory
+#  $CKPT: Pretrained BUVFM checkpoint used for downstream inference
+# ============================================================
+export clipsave=./output/QC/videos_full
+export inputfolder=./dataset/videos_full
+export CKPT='./ckpts/vjepa_full/best_vjepa_model9639(paper).pt'
+export TRPORT=29500
+export OUT=${clipsave}/pred.csv
+
+# ============================================================
+# Step 2. Quality Control (QC)
+# Perform automatic quality assessment:
+#   1. YOLO-based ultrasound region detection
+#   2. SVM-based image quality classification
+#   3. Save filtered clips for foundation model inference
+# Outputs:
+#   - QC-selected video clips: ${clipsave}
+#   - QC report: out.json
+# ============================================================
+python distill/quality_con.py --input_folder $inputfolder --yolo_model_path distill/det/output/ckpts/distilled.pt     --svm_model_path distill/cls/output/ckpts/best_finetune_distilled.pt --num_gpus 4 --batch_size 16 --clip_save_dir $clipsave --output_json_name ${clipsave}/out.json
+
+# ============================================================
+# Step 3. BUVFM Inference
+# Run distributed inference using 4 GPUs.
+# Outputs clip-level predictions to pred.csv.
+# ============================================================
+torchrun --master_port=$TRPORT --nproc_per_node=4 test.py --val_dir $clipsave --checkpoint $CKPT --output $OUT
+
+# ============================================================
+# Step 4. Case-level Aggregation
+# Merge clip-level predictions into case-level predictions.
+# Output: pred_merge.csv
+# ============================================================
+python merge.py --input_csv ${clipsave}/pred.csv --output_csv ${clipsave}/pred_merge.csv
+```
+
+</details>
+
 ## Project Structure
 <details>
 <summary>Show/Hide</summary>
@@ -160,9 +350,9 @@ BUVFM/
 │   ├── configs/                # YAML templates & per-model configs
 │   │   ├── pretrain-tample.yaml  # Pretrain config template
 │   │   ├── fintune-tample.yaml   # Fine-tune config template
-│   │   ├── vitg/               # Generated configs for ViT-Giant
-│   │   ├── vith/               # Generated configs for ViT-Huge
-│   │   └── vitl/               # Generated configs for ViT-Large
+│   │   ├── vitg/               # (generated by prepare.py) Configs for ViT-Giant
+│   │   ├── vith/               # (generated by prepare.py) Configs for ViT-Huge
+│   │   └── vitl/               # (generated by prepare.py) Configs for ViT-Large
 │   ├── src/                    # Shared models, datasets, masks, utils
 │   └── tests/                  # Unit tests for models and datasets
 ├── distill/
@@ -235,11 +425,25 @@ HF_TOKEN=/your/hugging/face/token python download_dataset_ckpt.py
 
 This downloads datasets to `./dataset/` and model weights to `./`, preserving the expected directory structure (`ckpts/`, `distill/`, `QC/`).
 
-You can also specify custom output directories:
+You can also specify custom output directories or download only datasets/checkpoints:
 
 ```bash
-HF_TOKEN=... python download_dataset_ckpt.py ./my_dataset ./my_models
+# Download only checkpoints to a custom directory
+HF_TOKEN=... python download_dataset_ckpt.py --what ckpt --model_dir ./my_models
+
+# Download only datasets to a custom directory
+HF_TOKEN=... python download_dataset_ckpt.py --what dataset --dataset_dir ./my_dataset
+
+# Download specific folders only (when --what is dataset or ckpt)
+HF_TOKEN=... python download_dataset_ckpt.py --what ckpt --include ckpts/vjepa_full
 ```
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--what` | `both` | What to download: `dataset`, `ckpt`, or `both` |
+| `--dataset_dir` | `./dataset` | Output directory for datasets |
+| `--model_dir` | `.` | Output directory for checkpoints |
+| `--include` | (all) | Only download specific folders (prefix matching) |
 
 ### Pretrained Starting Point
 
@@ -331,9 +535,9 @@ torchrun --master_port=$TRPORT --nproc_per_node=4 inference_ddp_old.py \
 
 | Argument | Default | Description |
 |---|---|---|
-| `--checkpoint` | (see code) | Path to fine-tuned checkpoint |
-| `--val_dir` | (required) | One or more validation directories |
-| `--output` | `./output/...` | Output CSV path |
+| `--checkpoint` | `./ckpts/vjepa_full/best_vjepa_model.pt` | Path to fine-tuned checkpoint |
+| `--val_dir` | `./dataset/videos_val` | One or more validation directories |
+| `--output` | `./output/inference_results.csv` | Output CSV path |
 | `--model_name` | `vit_giant_xformers` | Backbone variant |
 | `--frame_step` | 2 | Step between sampled frames |
 | `--frames_per_clip` | 16 | Frames sampled per clip |
@@ -470,71 +674,6 @@ For all Python package dependencies, see [requirements.txt](requirements.txt).
 | GPU Driver | 570.153.02 |
 | GPU | NVIDIA RTX PRO 6000 Blackwell Server Edition (96 GB) |
 | PyTorch | ≥ 2.0.0 |
-
-</details>
-
-## Reproduction
-<details>
-<summary>Show/Hide</summary>
-
-To reproduce the quantitative results reported in the manuscript:
-
-### 1. Prepare Environment & Data
-
-```bash
-conda create -n buvfm python=3.10.9 -y
-conda activate buvfm
-pip install -r requirements.txt
-HF_TOKEN=/your/hugging/face/token python download_dataset_ckpt.py
-```
-
-Organize your dataset following the [Dataset Preparation](#dataset-preparation) structure.
-
-### 2. Fine-Tune
-
-```bash
-torchrun --nproc_per_node=4 train.py \
-    --pretrained_ckpt ./ckpts/vjepa-nmode-pretrain.pt \
-    --train_dir /path/to/dataset/train \
-    --val_dir /path/to/dataset/val \
-    --batch_size 16 \
-    --lr 5e-5 \
-    --epochs 50
-```
-
-Checkpoints are saved to `./ckpts/vjepa_full/best_vjepa_model.pt`. Logs are written to `./output/logs_vjepa/vjepa_full.log`.
-
-### 3. Evaluate
-
-```bash
-torchrun --master_port=29599 --nproc_per_node=4 inference_ddp_old.py \
-    --val_dir /path/to/dataset/val \
-    --checkpoint ./ckpts/vjepa_full/best_vjepa_model.pt \
-    --output ./output/results.csv \
-    --frame_step 2 --frames_per_clip 16
-```
-
-Per-video predictions and confidence scores are written to the output CSV.
-
-### 4. Robustness Evaluation (Speckle Noise)
-
-```bash
-torchrun --master_port=29599 --nproc_per_node=4 inference_ddp_old.py \
-    --val_dir /path/to/dataset/val \
-    --checkpoint ./ckpts/vjepa_full/best_vjepa_model.pt \
-    --output ./output/robustness.csv \
-    --restore_true
-```
-
-This evaluates across speckle noise ratios from 0.05 to 0.95.
-
-### 5. Visualization (t-SNE / PCA)
-
-```bash
-python cluster_videos_nocohen.py
-```
-
-Edit `checkpoint_path` and `val_dir` inside the script before running.
 
 </details>
 
