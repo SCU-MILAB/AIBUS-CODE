@@ -44,7 +44,7 @@ Downloads all demo datasets to `./dataset/` and all model weights to `./` from [
 
 | Name | Save Path | Description |
 |------|-----------|-------------|
-| `orilong` | `dataset/orilong/` | Original long ultrasound videos |
+| `videos_full` | `dataset/videos_full/` | Original long ultrasound videos |
 | `videos_train` | `dataset/videos_train/` | Training set (ImageFolder: `class_0/1/2/`) |
 | `videos_val` | `dataset/videos_val/` | Validation set (ImageFolder: `class_0/1/2/`) |
 
