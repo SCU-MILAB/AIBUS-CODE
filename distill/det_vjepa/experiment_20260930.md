@@ -39,3 +39,10 @@ Keep the H1 time-limited optimization recipe, initialization checkpoint, batch s
 ## H3: train the detection neck and head with a frozen backbone
 
 Return to H1's 768-pixel recipe and the same reference checkpoint. Change only whether backbone parameters receive gradients: `--freeze_backbone` disables their updates while retaining the ViT-G structure, weight loading, and forward behavior. The hypothesis is that the pretrained features are already strong and that more neck/head optimization steps within 120 minutes will improve localization without perturbing the backbone. Compare H3 to H1's 0.806637 under the same 768-pixel input and to the global reference 0.810412. Keep the full 5,000-image validation and checkpoint gate unchanged.
+
+### H3 result
+
+- Epoch 0: 7,253 batches, lesion AP50:95 = 0.8078456610 on 5,000 images.
+- Epoch 1 stopped after another 3,528 batches at 7,185.5 cumulative training seconds; lesion AP50:95 = 0.8048499882 on 5,000 images.
+- The run-best score remained below 0.810412, so no checkpoint was written. Peak allocated VRAM = 5,586.1 MiB per GPU.
+- Freezing the backbone increased throughput and reduced memory, but validation quality declined during further head-only adaptation. A faster learning-rate decay is the next single-variable test.
