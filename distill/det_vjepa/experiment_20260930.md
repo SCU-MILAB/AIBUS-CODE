@@ -46,3 +46,7 @@ Return to H1's 768-pixel recipe and the same reference checkpoint. Change only w
 - Epoch 1 stopped after another 3,528 batches at 7,185.5 cumulative training seconds; lesion AP50:95 = 0.8048499882 on 5,000 images.
 - The run-best score remained below 0.810412, so no checkpoint was written. Peak allocated VRAM = 5,586.1 MiB per GPU.
 - Freezing the backbone increased throughput and reduced memory, but validation quality declined during further head-only adaptation. A faster learning-rate decay is the next single-variable test.
+
+## H4: shorten the head-only cosine schedule
+
+Keep H3's 768-pixel input, frozen backbone, optimizer, loss, initialization checkpoint, batch and evaluation fixed. Change only `--epochs` from 6 to 2, which shortens the cosine learning-rate schedule while `--train_minutes 120` still enforces the same training-time budget. H3 fell from 0.8078456610 after one epoch to 0.8048499882 after the next 3,528 batches; an earlier learning-rate reduction may preserve localization quality or improve it. Compare the full-validation run-best score to H3 and to the global reference 0.8104124889. Save weights only above the global reference.
