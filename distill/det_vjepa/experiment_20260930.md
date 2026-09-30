@@ -25,3 +25,7 @@ The training script change that enforces the time and checkpoint budget is run i
 ## Baseline error analysis for the next hypothesis
 
 For the 5,000-image validation predictions already on disk, the smallest quarter of 4,157 annotated lesions has mean best-match IoU 0.8565 at 768 pixels, versus 0.9159 for the largest quarter. Comparing the old 640- and 768-pixel prediction files on the same objects, the smallest-quarter mean best-match IoU rises from 0.8378 to 0.8565 while the largest quarter changes from 0.9167 to 0.9159. This is descriptive error analysis, not a change to the official AP computation.
+
+## H2: increase input resolution to 896
+
+Keep the H1 time-limited optimization recipe, initialization checkpoint, batch size, warmup, loss, and evaluation fixed. Change only `--imgsz` from 768 to 896. The prediction analysis above suggests that the extra spatial detail may improve localization of small lesions, which have the largest gap at high IoU. Predict a higher lesion AP50:95 than H1's 0.806637 and test whether it also exceeds the global reference 0.810412. Use the same 120-minute training budget and 5,000-image validation; save a checkpoint only above the global reference.
