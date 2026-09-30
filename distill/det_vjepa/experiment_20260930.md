@@ -29,3 +29,9 @@ For the 5,000-image validation predictions already on disk, the smallest quarter
 ## H2: increase input resolution to 896
 
 Keep the H1 time-limited optimization recipe, initialization checkpoint, batch size, warmup, loss, and evaluation fixed. Change only `--imgsz` from 768 to 896. The prediction analysis above suggests that the extra spatial detail may improve localization of small lesions, which have the largest gap at high IoU. Predict a higher lesion AP50:95 than H1's 0.806637 and test whether it also exceeds the global reference 0.810412. Use the same 120-minute training budget and 5,000-image validation; save a checkpoint only above the global reference.
+
+### H2 result
+
+- 2,520 training batches; 7,190.0 training seconds; all 5,000 validation images.
+- Lesion AP50:95 = 0.8049352869, below both H1 and the global reference. Peak allocated VRAM = 25,071.1 MiB per GPU.
+- No checkpoint was written. The 896-pixel run had much lower throughput than H1 while two other four-GPU jobs shared the machine, so this result measures the fixed-time recipe under that contention and does not isolate a pure resolution effect.

@@ -1,3 +1,4 @@
 commit	lesion_AP50_95	memory_gb	status	description
 eecbd62	0.810412	0.0	keep	existing 768 checkpoint; peak memory not recorded
 86b99b8	0.806637	23.6	discard	shorten warmup to 0.1 epoch at 768; 120 min
+d7d7549	0.804935	24.5	discard	increase input resolution to 896; 120 min
