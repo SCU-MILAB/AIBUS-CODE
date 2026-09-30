@@ -122,9 +122,12 @@ def lr_scale(step, total_steps, warmup_steps, min_ratio):
 
 def train_one_epoch(model, base_model, loader, optimizer, criterion, device,
                     epoch, args, steps_per_epoch, total_steps, warmup_steps,
-                    is_distributed, log):
+                    is_distributed, log, remaining_seconds=None):
     model.train()
     running = torch.zeros(4, device=device)  # loss, cls, reg, ctr
+    started = None
+    batches = 0
+    timed_out = False
     accum = max(args.accum, 1)
     # `lr_scale` is defined over the complete run, not over an individual
     # epoch.  Starting at the epoch offset also makes a resumed run use the
@@ -132,6 +135,10 @@ def train_one_epoch(model, base_model, loader, optimizer, criterion, device,
     global_step = epoch * steps_per_epoch
 
     for it, (images, targets) in enumerate(loader):
+        if started is None:
+            # DataLoader worker startup is outside the training budget.
+            started = time.monotonic()
+        batches += 1
         images = images.to(device, non_blocking=True)
         targets = [{k: (v.to(device) if torch.is_tensor(v) else v)
                     for k, v in t.items()} for t in targets]
@@ -165,19 +172,34 @@ def train_one_epoch(model, base_model, loader, optimizer, criterion, device,
         optimizer.zero_grad(set_to_none=True)
         global_step += 1
 
+        if remaining_seconds is not None:
+            # Leave room for the last optimizer step to finish inside the
+            # 120-minute budget. Rank zero decides so every DDP rank exits
+            # after the same step.
+            stop = torch.tensor(
+                int(time.monotonic() - started >= max(remaining_seconds - 15, 0))
+                if not is_distributed or dist.get_rank() == 0 else 0,
+                device=device, dtype=torch.int32)
+            if is_distributed:
+                dist.broadcast(stop, src=0)
+            timed_out = bool(stop.item())
+
         if log and (it + 1) % args.log_every == 0:
             avg = running / (it + 1)
             print(f'  epoch {epoch} [{it + 1}/{len(loader)}] '
                   f'loss {avg[0]:.4f} (cls {avg[1]:.4f} reg {avg[2]:.4f} '
                   f'ctr {avg[3]:.4f}) lr {optimizer.param_groups[-1]["lr"]:.2e}',
                   flush=True)
+        if timed_out:
+            break
 
     if is_distributed:
         running = running.clone()
         dist.all_reduce(running)
         running /= dist.get_world_size()
-    avg = (running / len(loader)).tolist()
-    return {'loss': avg[0], 'cls': avg[1], 'reg': avg[2], 'ctr': avg[3]}
+    avg = (running / batches).tolist()
+    return ({'loss': avg[0], 'cls': avg[1], 'reg': avg[2], 'ctr': avg[3]},
+            time.monotonic() - started, timed_out, batches)
 
 
 def evaluate(base_model, loader, device, num_classes, args, max_images=0,
@@ -234,6 +256,8 @@ def parse_args():
     p.add_argument('--min_lr_ratio', type=float, default=0.01)
     p.add_argument('--clip_grad', type=float, default=1.0)
     p.add_argument('--reg_weight', type=float, default=1.0, help='GIoU loss weight')
+    p.add_argument('--train_minutes', type=float, default=0,
+                   help='training time budget in minutes; 0 = complete all epochs')
 
     # Eval / IO
     p.add_argument('--val_batch', type=int, default=8)
@@ -247,6 +271,8 @@ def parse_args():
                    default='lesion_AP50_95', help='validation metric used to select best.pt')
     p.add_argument('--iou_thres', type=float, default=0.7)
     p.add_argument('--save_period', type=int, default=0, help='epochs between snapshots')
+    p.add_argument('--save_min_score', type=float, default=-1,
+                   help='save best.pt only above this full-validation selection score')
     p.add_argument('--resume', type=str, default='', help='checkpoint to resume from')
     p.add_argument('--init_weights', type=str, default='',
                    help='load detector model weights only; start a new optimizer and LR schedule')
@@ -260,6 +286,7 @@ def parse_args():
 
 
 def main():
+    run_started = time.monotonic()
     args = parse_args()
     if args.selection_metric == 'lesion_AP50_95' and not args.lesion_only:
         raise ValueError('--selection_metric lesion_AP50_95 requires --lesion_only')
@@ -269,6 +296,8 @@ def main():
         raise ValueError('--black_threshold must be in [0, 255]')
     if not math.isfinite(args.rank_zero_timeout) or args.rank_zero_timeout <= 0:
         raise ValueError('--rank_zero_timeout must be a finite positive number')
+    if not math.isfinite(args.train_minutes) or args.train_minutes < 0:
+        raise ValueError('--train_minutes must be finite and non-negative')
     rank, world_size, device, is_distributed = setup_distributed(args.device)
     # All ranks create this group in the same order, before rank-only work.
     rank_zero_group = create_rank_zero_group(args.rank_zero_timeout) if is_distributed else None
@@ -366,18 +395,26 @@ def main():
     metrics_path = os.path.join(run_dir, 'metrics.jsonl')
 
     best_map = -1.0
+    training_seconds = 0.0
+    torch.cuda.reset_peak_memory_stats(device)
     for epoch in range(start_epoch, args.epochs):
         if train_sampler is not None:
             train_sampler.set_epoch(epoch)
 
         started = time.time()
-        train_metrics = train_one_epoch(
+        remaining_seconds = (args.train_minutes * 60 - training_seconds
+                             if args.train_minutes else None)
+        if remaining_seconds is not None and remaining_seconds <= 15:
+            break
+        train_metrics, epoch_seconds, timed_out, batches = train_one_epoch(
             model, base_model, train_loader, optimizer, criterion, device,
             epoch, args, steps_per_epoch, total_steps, warmup_steps,
-            is_distributed, log)
+            is_distributed, log, remaining_seconds)
+        training_seconds += epoch_seconds
 
         record = {'epoch': epoch, 'train': train_metrics,
-                  'minutes': (time.time() - started) / 60}
+                  'minutes': (time.time() - started) / 60,
+                  'train_batches': batches, 'time_budget_reached': timed_out}
         if log:
             print(f'epoch {epoch} done in {record["minutes"]:.1f} min | '
                   f'train loss {train_metrics["loss"]:.4f}', flush=True)
@@ -414,15 +451,18 @@ def main():
                 f.write(json.dumps(record) + '\n')
 
             is_last = epoch == args.epochs - 1
-            ckpt = {'model': base_model.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'epoch': epoch, 'args': vars(args),
-                    'class_names': class_names,
-                    'model_num_classes': base_model.head.num_classes}
-            if is_last or (args.save_period and (epoch + 1) % args.save_period == 0):
+            save_snapshot = args.save_period and (is_last or (epoch + 1) % args.save_period == 0)
+            save_best = is_best and score > args.save_min_score
+            if save_snapshot or save_best:
+                ckpt = {'model': base_model.state_dict(),
+                        'optimizer': optimizer.state_dict(),
+                        'epoch': epoch, 'args': vars(args),
+                        'class_names': class_names,
+                        'model_num_classes': base_model.head.num_classes}
+            if save_snapshot:
                 torch.save(ckpt, os.path.join(run_dir, f'last_epoch{epoch}.pt'))
 
-            if is_best:
+            if save_best:
                 torch.save(ckpt, os.path.join(run_dir, 'best.pt'))
                 save_predictions(os.path.join(run_dir, 'best_prediction.csv'),
                                  val_predictions, class_names)
@@ -440,8 +480,13 @@ def main():
                                    selection_mAP50_95=record['val_partial']['mAP50_95'],
                                    **export_metrics), f, indent=2)
                 print(f'  new best {args.selection_metric} {best_map:.4f}', flush=True)
+            elif is_best:
+                print(f'  run best {args.selection_metric} {best_map:.6f}; '
+                      f'checkpoint threshold {args.save_min_score:.6f} not met', flush=True)
 
         wait_for_rank_zero(rank_zero_group)
+        if timed_out:
+            break
 
     if args.final_val_max_images != args.val_max_images:
         final = evaluate(base_model, val_loader, device, len(class_names), args,
@@ -455,6 +500,16 @@ def main():
             f.write(json.dumps({'final_val': final}) + '\n')
 
     wait_for_rank_zero(rank_zero_group)
+    peak_vram = torch.tensor(torch.cuda.max_memory_allocated(device) / 2**20,
+                             device=device)
+    if is_distributed:
+        dist.all_reduce(peak_vram, op=dist.ReduceOp.MAX)
+    if log:
+        print('---', flush=True)
+        print(f'lesion_AP50_95: {best_map:.9f}', flush=True)
+        print(f'training_seconds: {training_seconds:.1f}', flush=True)
+        print(f'total_seconds: {time.monotonic() - run_started:.1f}', flush=True)
+        print(f'peak_vram_mb: {peak_vram.item():.1f}', flush=True)
     if is_distributed:
         dist.destroy_process_group(rank_zero_group)
         dist.destroy_process_group()
