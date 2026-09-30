@@ -14,3 +14,14 @@
 Starting from the reference checkpoint, train at 768 pixels with the same effective batch size of 64 (`--batch 4 --accum 4`). Use 0.1 warmup epochs instead of 0.5. The baseline took about 147 minutes per epoch; with a 120-minute cap, 0.5 epochs of warmup consumes most of the run. A shorter warmup should allow more useful updates at the target learning rates. This is an exploratory continuation because the reference result came from a longer six-epoch run.
 
 The training script change that enforces the time and checkpoint budget is run infrastructure, not the H1 model variable. If H1 fails, retain its score in `results.tsv` and return the model parameters to the baseline before the next hypothesis.
+
+### H1 result
+
+- 4,024 training batches; 7,192.4 training seconds; all 5,000 validation images.
+- Lesion AP50:95 = 0.8066371396, below the reference by 0.0037753493. Peak allocated VRAM = 24,189.6 MiB per GPU.
+- No checkpoint was written. The shorter warmup did not improve the detector within this budget. No H1-specific model or loss code was changed; subsequent runs still initialize from the reference checkpoint.
+- The run shared the GPUs with one existing detector training job and, later, a second multi-depth detector job. `train_batches` documents the resulting throughput.
+
+## Baseline error analysis for the next hypothesis
+
+For the 5,000-image validation predictions already on disk, the smallest quarter of 4,157 annotated lesions has mean best-match IoU 0.8565 at 768 pixels, versus 0.9159 for the largest quarter. Comparing the old 640- and 768-pixel prediction files on the same objects, the smallest-quarter mean best-match IoU rises from 0.8378 to 0.8565 while the largest quarter changes from 0.9167 to 0.9159. This is descriptive error analysis, not a change to the official AP computation.
