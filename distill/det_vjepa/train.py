@@ -451,7 +451,12 @@ def main():
                 f.write(json.dumps(record) + '\n')
 
             is_last = epoch == args.epochs - 1
-            save_snapshot = args.save_period and (is_last or (epoch + 1) % args.save_period == 0)
+            # Preserve the original final snapshot for ordinary runs. The
+            # autoresearch score gate disables that large snapshot when
+            # --save_period is zero.
+            save_snapshot = ((is_last and args.save_min_score < 0)
+                             or (args.save_period > 0
+                                 and (is_last or (epoch + 1) % args.save_period == 0)))
             save_best = is_best and score > args.save_min_score
             if save_snapshot or save_best:
                 ckpt = {'model': base_model.state_dict(),
