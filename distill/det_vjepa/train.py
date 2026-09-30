@@ -242,6 +242,8 @@ def parse_args():
                    help='0-255 intensity threshold for non-black foreground region')
     p.add_argument('--grad_checkpoint', action=argparse.BooleanOptionalAction,
                    default=True, help='activation checkpointing in ViT blocks')
+    p.add_argument('--freeze_backbone', action=argparse.BooleanOptionalAction,
+                   default=False, help='train only the neck and detection head')
     p.add_argument('--amp', action=argparse.BooleanOptionalAction, default=True)
 
     # Optimisation
@@ -339,6 +341,9 @@ def main():
         drop_path=args.drop_path, grad_checkpoint=args.grad_checkpoint,
         out_layers=args.out_layers,
     ).to(device)
+
+    if args.freeze_backbone:
+        base_model.backbone.requires_grad_(False)
 
     optimizer = build_optimizer(base_model, args, len(base_model.backbone.blocks))
     criterion = FCOSLoss(fpn_strides=tuple(args.fpn_strides),

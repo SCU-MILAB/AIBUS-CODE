@@ -35,3 +35,7 @@ Keep the H1 time-limited optimization recipe, initialization checkpoint, batch s
 - 2,520 training batches; 7,190.0 training seconds; all 5,000 validation images.
 - Lesion AP50:95 = 0.8049352869, below both H1 and the global reference. Peak allocated VRAM = 25,071.1 MiB per GPU.
 - No checkpoint was written. The 896-pixel run had much lower throughput than H1 while two other four-GPU jobs shared the machine, so this result measures the fixed-time recipe under that contention and does not isolate a pure resolution effect.
+
+## H3: train the detection neck and head with a frozen backbone
+
+Return to H1's 768-pixel recipe and the same reference checkpoint. Change only whether backbone parameters receive gradients: `--freeze_backbone` disables their updates while retaining the ViT-G structure, weight loading, and forward behavior. The hypothesis is that the pretrained features are already strong and that more neck/head optimization steps within 120 minutes will improve localization without perturbing the backbone. Compare H3 to H1's 0.806637 under the same 768-pixel input and to the global reference 0.810412. Keep the full 5,000-image validation and checkpoint gate unchanged.
