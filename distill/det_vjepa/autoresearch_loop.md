@@ -14,4 +14,6 @@ Resources are checked before each launch. Head-only runs require at least 16,000
 
 Runtime logs and receipts live in the ignored `output/` directory. The loop PID is in `output/autoresearch_h4_h5.queue.pid`, its log is `output/autoresearch_h4_h5.queue.log`, and each subsequent training PID is stored in `output/<exp_name>.pid`. Creating `output/autoresearch.stop` requests an exit after the current experiment finishes; the marker is checked before the next launch. A restart can collect an existing experiment or use its saved receipt instead of launching it twice.
 
+On recovery, the loop checks pending protocols against their saved process IDs and experiment names, collects completed runs once, restores the highest verified accepted AP from all receipts, and resumes with an unused experiment number. Saved recipes are normalized to include later optional fields, so restarting after a policy update preserves the global best checkpoint and completed test history.
+
 The persistent process executes this registered experiment policy. Its later proposals follow the bounded refinement rules above; deeper code changes and new research directions can be introduced in an active agent session.

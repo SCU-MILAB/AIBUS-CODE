@@ -229,6 +229,58 @@ def proposals(incumbent):
         cycle += 1
 
 
+def recover_pending():
+    for protocol in sorted((DET / 'experiments').glob('autoresearch_oct1_h*/protocol.json')):
+        saved = json.loads(protocol.read_text())
+        exp = saved['experiment']
+        receipt = OUTPUT / f'{exp}.result.json'
+        if receipt.exists() or not (OUTPUT / f'{exp}.log').exists():
+            continue
+        pid_file = OUTPUT / f'{exp}.pid'
+        pid = int(pid_file.read_text()) if pid_file.exists() else 0
+        report(f'recovering {exp}, PID {pid}')
+        while running(pid, exp):
+            time.sleep(50)
+        commit = git('log', '-1', '--format=%h', '--abbrev=7', '--', str(protocol.relative_to(ROOT)))
+        description = f'{saved["variable"]} {saved["previous"]} to {saved["proposed"]} at 768; 120 min'
+        result = collect(exp, commit, saved['checkpoint_gate'], description)
+        record_result(result)
+
+
+def known_best():
+    gate, weights, recipe = REFERENCE_SCORE, REFERENCE, BASE_RECIPE.copy()
+    for receipt in sorted(OUTPUT.glob('autoresearch_*.result.json')):
+        result = json.loads(receipt.read_text())
+        if result['status'] != 'keep' or result['score'] <= gate:
+            continue
+        directory = OUTPUT / result['experiment']
+        cfg = json.loads((directory / 'config.json').read_text())
+        metrics = json.loads((directory / 'best_prediction.metrics.json').read_text())
+        assert (directory / 'best.pt').is_file()
+        assert metrics['num_images'] == 5000
+        assert abs(metrics['lesion_AP50_95'] - result['score']) < 1e-8
+        gate, weights = result['score'], directory / 'best.pt'
+        recipe = {key: cfg.get(key, default) for key, default in BASE_RECIPE.items()}
+    return gate, weights, recipe
+
+
+def history():
+    tested, last_number = set(), 5
+    for path in OUTPUT.glob('autoresearch_oct1_h*'):
+        match = re.match(r'autoresearch_oct1_h(\d+)_', path.name)
+        if match:
+            last_number = max(last_number, int(match[1]))
+    for protocol in (DET / 'experiments').glob('autoresearch_oct1_h*/protocol.json'):
+        saved = json.loads(protocol.read_text())
+        match = re.match(r'autoresearch_oct1_h(\d+)_', saved['experiment'])
+        if match:
+            last_number = max(last_number, int(match[1]))
+        if (OUTPUT / f'{saved["experiment"]}.result.json').exists():
+            recipe = dict(BASE_RECIPE, **saved['recipe'])
+            tested.add((saved['initialization'], json.dumps(recipe, sort_keys=True)))
+    return tested, last_number + 1
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--h4_pid', type=int, required=True)
@@ -239,18 +291,16 @@ def main():
         time.sleep(50)
     h4 = collect(H4, '8cf9341', REFERENCE_SCORE, 'shorten frozen-backbone cosine horizon to 2 epochs; 120 min')
     record_result(h4)
-    gate = h4.get('score', REFERENCE_SCORE) if h4['status'] == 'keep' else REFERENCE_SCORE
-    weights = OUTPUT / H4 / 'best.pt' if h4['status'] == 'keep' else REFERENCE
-    incumbent = BASE_RECIPE.copy()
-    recipe = dict(incumbent, out_layers=[13, 26, 39])
-    h5 = run(H5, weights, gate, recipe, 'out_layers', None)
-    if h5 is None:
-        return
-    if h5['status'] == 'keep':
-        gate, weights = h5['score'], OUTPUT / H5 / 'best.pt'
-        incumbent.update(recipe)
-    tested = {(str(weights), json.dumps(recipe, sort_keys=True))}
-    for number, (variable, value) in enumerate(proposals(incumbent), 6):
+    recover_pending()
+    gate, weights, incumbent = known_best()
+    if not (OUTPUT / f'{H5}.result.json').exists():
+        recipe = dict(incumbent, out_layers=[13, 26, 39])
+        h5 = run(H5, weights, gate, recipe, 'out_layers', incumbent['out_layers'])
+        if h5 is None:
+            return
+        gate, weights, incumbent = known_best()
+    tested, number = history()
+    for variable, value in proposals(incumbent):
         if STOP.exists():
             report('manual stop marker found; experiment loop stopped')
             return
@@ -261,10 +311,11 @@ def main():
         assert sum(recipe[key] != incumbent[key] for key in recipe) == 1
         tested.add(signature)
         exp = f'autoresearch_oct1_h{number}_{variable}'
+        number += 1
         result = run(exp, weights, gate, recipe, variable, incumbent[variable])
         if result is None:
             return
-        if result['status'] == 'keep':
+        if result['status'] == 'keep' and result['score'] > gate:
             gate, weights = result['score'], OUTPUT / exp / 'best.pt'
             incumbent.update(recipe)
         report(f'current best lesion AP50:95={gate:.10f}; next experiment will initialize from {weights}')
