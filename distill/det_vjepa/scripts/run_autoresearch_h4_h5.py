@@ -236,6 +236,17 @@ def proposals(incumbent):
         cycle += 1
 
 
+def value_slug(value):
+    """Give repeated proposals of the same recipe field distinct run names."""
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    if isinstance(value, (list, tuple)):
+        return '_'.join(map(str, value))
+    if value is None:
+        return 'none'
+    return str(value).replace('-', 'm').replace('.', 'p')
+
+
 def recover_pending():
     for protocol in sorted((DET / 'experiments').glob('autoresearch_oct1_h*/protocol.json')):
         saved = json.loads(protocol.read_text())
@@ -317,7 +328,7 @@ def main():
             continue
         assert sum(recipe[key] != incumbent[key] for key in recipe) == 1
         tested.add(signature)
-        exp = f'autoresearch_oct1_h{number}_{variable}'
+        exp = f'autoresearch_oct1_h{number}_{variable}_{value_slug(value)}'
         number += 1
         result = run(exp, weights, gate, recipe, variable, incumbent[variable])
         if result is None:
