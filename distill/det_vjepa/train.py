@@ -492,6 +492,7 @@ def main():
                                    checkpoint_epoch=epoch, class_names=class_names,
                                    data=args.data, imgsz=args.imgsz,
                                    out_layers=args.out_layers,
+                                   fpn_topdown_scale=args.fpn_topdown_scale,
                                    lesion_only=args.lesion_only,
                                    model_num_classes=base_model.head.num_classes,
                                    black_threshold=args.black_threshold,
