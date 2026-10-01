@@ -1,6 +1,6 @@
-# 实验进展：H4/H5 完成，H6 有效 batch 32 继续训练
+# 实验进展：H6 完成，H7 框定位适配正在启动
 
-更新时间：2026-10-01 14:13 UTC。实验分支：`autoresearch/sep30`。
+更新时间：2026-10-01 14:44 UTC。实验分支：`autoresearch/sep30`。
 
 ## 已完成结果
 
@@ -14,7 +14,7 @@
 | H3 | H1 设置、冻结 backbone | 0.807845661 | 0.973024136 | -0.002566828 | discard |
 | H4 | H3 设置、cosine horizon 2 epochs | 0.809438775 | 0.973417841 | -0.000973713 | discard |
 | H5 | H4 控制设置、多层 13/26/39 | 0.804101188 | 0.973290396 | -0.006311300 | discard |
-| H6 epoch 1 | 有效 batch 32；120 分钟预算尚未完成 | 0.809117651 | 0.973484848 | -0.001294838 | 继续训练 |
+| H6 | 有效 batch 32；120 分钟预算完成 | 0.809117651 | 0.973484848 | -0.001294838 | discard |
 | 用户原 FPN | 13/26/39，多项训练设置不同 | 0.802131261 | 0.974622184 | -0.008281228 | 仅作诊断比较 |
 
 ![相对参考模型的 AP 和 F1 变化](output/autoresearch_progress_20261001T122853.png)
@@ -35,7 +35,7 @@ H5 从同一原最佳权重初始化，相对 H4 控制设置只改变 `out_laye
 
 H5 的总批数也少于 H4 的 28,031，因为 GPU 竞争背景不同；两个 run-best 的差值同时受固定时间内的数据曝光量影响。原 FPN 的其他训练设置不同，这轮结果不能否定整个多层特征方法。
 
-![匹配覆盖与定位变化：H6 两个 epoch 的中间结果](output/autoresearch_localization_20261001T1413.png)
+![匹配覆盖与定位变化：H6 的 epoch 与完整预算验证](output/autoresearch_localization_20261001T1444.png)
 
 图中 IoU 诊断基于原标注的 best matches，无一对一匹配；共同匹配子集随候选模型变化，不能代替官方 AP 或召回率。绘图脚本为 `scripts/plot_localization_diagnostics.py`，PNG、SVG 和数值 JSON 均已保存。
 
@@ -47,8 +47,8 @@ H5 的总批数也少于 H4 的 28,031，因为 GPU 竞争背景不同；两个 
 
 ## 当前与后续实验
 
-H6 已于 12:24 UTC 启动：`autoresearch_oct1_h6_accum`，协议提交 `5c72dc1`。它从原最佳权重初始化，回到默认 final-map 特征来源，相对 H4 控制设置只把 accumulation 从 4 改为 2。四卡、每卡 microbatch 4，对应有效 batch 32；其余冻结 backbone、768 输入、两 epoch cosine horizon、优化器和 120 分钟实际训练预算保持该控制设置。H6 epoch 0/1 两轮完整验证 AP 分别为 0.808419786/0.809117651，F1 为 0.972763382/0.973484848；第二轮 TP/FP/FN 为 4,064/180/93。当前 AP 仍低于原参考，训练继续到固定预算结束，再作最终决策。
+H6 已于 12:24 UTC 启动：`autoresearch_oct1_h6_accum`，协议提交 `5c72dc1`。它从原最佳权重初始化，回到默认 final-map 特征来源，相对 H4 控制设置只把 accumulation 从 4 改为 2。四卡、每卡 microbatch 4，对应有效 batch 32；其余冻结 backbone、768 输入、两 epoch cosine horizon、优化器和 120 分钟实际训练预算保持该控制设置。H6 完成 7,185.1 秒实际训练、17,976 批、峰值显存 5,585.7 MiB/卡。三次完整验证 AP 为 0.808419786、0.809117651、0.808877110；最佳在 epoch 1，F1 为 0.973484848，TP/FP/FN 为 4,064/180/93。AP 比全局最佳低 0.001294838，因此记为 discard、没有保存权重；结果提交为 `e2040ef`。
 
-如果 H6 改善主指标，再在新 incumbent 上复测 13/26/39。其后先测试只更新 bbox 输出卷积和各层缩放参数（9,223 个参数）：冻结其余 neck/head，冻结 backbone 时保持原分类与 centerness 原始输出，单独适配框几何。CPU 实际优化与空标注梯度检查已通过。这个假设来自两轮 H6 的配对诊断：epoch 0 共同检出病灶的平均 IoU 低约 0.00059，epoch 1 高约 0.00031；两轮均净少 14 个 IoU 0.5 best matches。epoch 1 最小病灶组的共同匹配 IoU 低约 0.00046。该诊断不是官方 AP 或召回率。随后依次测试减弱 FPN top-down 融合、centerness 加权回归、更深的 19/29/39 特征来源和关闭 top-down 融合，再继续学习率及正则化实验。关闭融合的依据和适用限制见 [ViTDet 论文笔记](literature/vitdet_pyramid_notes.md)。每次仅改变一个主要变量，使用新的实验目录，超过当前最佳 AP 才保存和采用权重。
+H6 未越过全局 AP 门槛，仍以原参考模型为 incumbent；本轮不再重复已测过的 13/26/39 组合。H7 已在原最佳权重上启动，只改变训练范围：将可训练范围缩至 bbox 输出卷积和各层缩放。完成后按计划先测试只更新 bbox 输出卷积和各层缩放参数（9,223 个参数）：冻结其余 neck/head，冻结 backbone 时保持原分类与 centerness 原始输出，单独适配框几何。CPU 实际优化与空标注梯度检查已通过。这个假设来自两轮 H6 的配对诊断：epoch 0 共同检出病灶的平均 IoU 低约 0.00059，epoch 1 高约 0.00031；两轮均净少 14 个 IoU 0.5 best matches。epoch 1 最小病灶组的共同匹配 IoU 低约 0.00046。该诊断不是官方 AP 或召回率。随后依次测试减弱 FPN top-down 融合、centerness 加权回归、更深的 19/29/39 特征来源和关闭 top-down 融合，再继续学习率及正则化实验。关闭融合的依据和适用限制见 [ViTDet 论文笔记](literature/vitdet_pyramid_notes.md)。每次仅改变一个主要变量，使用新的实验目录，超过当前最佳 AP 才保存和采用权重。
 
 持续循环的状态和操作见 [autoresearch_loop.md](autoresearch_loop.md)，数值台账见 [results.tsv](results.tsv)，完整协议与分析见 [experiment_20260930.md](experiment_20260930.md)。
