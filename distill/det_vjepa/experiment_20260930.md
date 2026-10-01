@@ -96,6 +96,16 @@ Both H4 and H5 had processed 14,506 batches at this point. H5 AP was lower by 0.
 
 The reference-paired diagnostic still found a deficit: 10 newly above-threshold best matches and 26 lost matches at IoU 0.5, mean IoU difference -0.0022362056 among the 4,052 mutually above-threshold lesions, and -0.0043440269 in the smallest-area mutually matched subset. Those conditional subsets can differ between epochs. The unconditioned smallest-quarter fraction reaching best-match IoU 0.9 rose from 0.503369 to 0.506256, versus reference 0.549567. Complete-training results are still required for acceptance. Diagnostic: `output/autoresearch_oct1_h5_epoch1_diagnostics.json`.
 
+### H5 final result and five-run reflection
+
+H5 completed two full epochs plus 3,592 batches of epoch 2, totaling 18,098 batches and 7,185.2 actual training seconds. Total run time was 8,111.3 seconds; peak allocated VRAM was 5,587.2 MiB per GPU. All three validations covered 5,000 images, and the final budget-stop flag was true. The run-best/final AP50:95 was 0.8041011885, overall F1 0.9732903959, lesion TP/FP/FN 4,063/180/94. This remained 0.0063113004 below the global reference, so the result was `discard` and no checkpoint was written. The separate result commit was `623a9d9`.
+
+At the final epoch, the descriptive reference-paired diagnostic gained 10 above-threshold best matches and lost 25 at IoU 0.5. The 4,053 mutually above-threshold lesions had mean IoU difference -0.0022301038; the smallest-area mutually matched subset (983 lesions) had difference -0.0041969744, while the largest had +0.0011714987. The smallest-quarter fraction reaching best-match IoU 0.9 was 0.510106 versus reference 0.549567. These diagnostics support continued attention to fine-level localization, with the matching and conditioning limits stated above. Artifact: `output/autoresearch_oct1_h5_epoch2_diagnostics.json`.
+
+Across H1-H5, no fixed-budget continuation has exceeded the strong initial checkpoint. H4's faster decay produced the closest run-best AP; H5's multi-depth routing raised F1 relative to the original reference but reduced high-IoU AP under this frozen-backbone recipe. At matched two-epoch exposure, the routing gap was already visible. At run completion, H5 also processed fewer batches than H4 because of different GPU contention, so their complete-run difference combines routing and fixed-time exposure effects. The older user FPN retains different training settings and is not refuted as an entire method family by H5.
+
+Proceed with the identified effective-batch correction before additional neck changes. Keep global checkpoint selection separate from secondary F1 improvement. Then test partial fusion, weighted regression, deeper routing and independent pyramid outputs, with conservative optimization proposals retained in the later queue. This direction follows the observed small-lesion/high-IoU gap and preserves the original encoder and evaluation.
+
 ## H6: match the reference effective batch of 32
 
 The reference's stored configuration has `batch=4, accum=4`; its `train.log` and `scripts/run_lesion_resolution_ablation.sh` establish two GPU ranks. Its effective batch was therefore 32, while the four-GPU H1-H5 recipe has effective batch 64. Change only accumulation from 4 to 2 in the incumbent four-GPU recipe, retaining microbatch 4, frozen backbone, feature routing, learning rates, cosine horizon, loss, initialization and fixed training-time budget. The hypothesis is that restoring the reference effective batch and more frequent optimizer updates may improve the already strong detector. This is a batch-size test within the current continuation recipe, not a reproduction of the reference's entire original training run.
@@ -103,6 +113,8 @@ The reference's stored configuration has `batch=4, accum=4`; its `train.log` and
 Initialize from the current validated best; evaluate all 5,000 images and save only above the global AP gate. Preserve the H5 FPN control at accumulation 4 so the two hypotheses remain separate.
 
 Before the later fusion/loss tests, revisit `out_layers=13 26 39` when the current best checkpoint/recipe makes it an untested combination, for example after H6 accepts accumulation 2. Change only feature routing relative to that accepted recipe. If routing is already active or the same initialization/recipe was tested, skip it. The user's earlier FPN also had effective batch 32, motivating this conditional combination; it is not a full factorial test if both initial continuation recipes fail. Later experiment numbers may shift when this extra proposal actually runs.
+
+H6 launched at 2026-10-01 12:24 UTC as `autoresearch_oct1_h6_accum`, following its exact protocol commit `5c72dc1`. Initialization and gate remained the original best checkpoint and 0.8104124888777733. Routing returned to the H4 control's final map (`out_layers=None`); accumulation alone changed 4→2 relative to that control. The schedule has 3,627 optimizer updates per full epoch and the same two-epoch cosine horizon. H6 is still running.
 
 ## H7: reduce top-down FPN fusion strength
 
