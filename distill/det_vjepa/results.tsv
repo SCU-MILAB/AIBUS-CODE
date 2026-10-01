@@ -7,3 +7,4 @@ d7d7549	0.804935	24.5	discard	increase input resolution to 896; 120 min
 f5fc6d0	0.804101	5.5	discard	out_layers None to [13, 26, 39] at 768; 120 min
 5c72dc1	0.809118	5.5	discard	accum 4 to 2 at 768; 120 min
 844115a	0.810380	4.6	discard	head_train_scope all to box_projection at 768; 120 min
+df5734e	0.808157	5.5	discard	fpn_topdown_scale 1.0 to 0.5 at 768; 120 min
