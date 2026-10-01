@@ -210,11 +210,12 @@ def proposals(incumbent):
     # already tested combinations are skipped by the main loop.
     initial = [('accum', 2), ('out_layers', [13, 26, 39]),
                ('fpn_topdown_scale', .5), ('reg_centerness_weighted', True),
+               ('out_layers', [19, 29, 39]), ('fpn_topdown_scale', 0.0),
                ('drop_path', 0.0), ('lr_head', 1e-5), ('reg_weight', 1.5),
                ('fpn_topdown_scale', .75), ('cosine_epochs', 1.0),
                ('freeze_backbone', False), ('reg_weight', 2.0),
                ('lr_head', 5e-6), ('fpn_topdown_scale', .25), ('cosine_epochs', 3.0),
-               ('out_layers', [19, 29, 39]), ('out_layers', None)]
+               ('out_layers', None)]
     yield from initial
     bounds = dict(fpn_topdown_scale=(0.0, 1.0), drop_path=(0.0, .2),
                   reg_weight=(.25, 4.0), cosine_epochs=(.2, 12.0))

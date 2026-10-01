@@ -78,6 +78,16 @@ On 2026-10-01, the user confirmed that their FPN observation came from `vjepa_gi
 
 Predict improved F1 from richer feature routing, and test whether conservative neck/head optimization can also exceed the best lesion AP50:95. Validate all 5,000 images and save only above the current best AP. Initialize from the original reference unless H4 establishes a better checkpoint. Compare the result with the old multi-depth experiment descriptively because its other training settings differed. H5 is `autoresearch_oct1_h5_multidepth`.
 
+### H5 interim evidence: first complete validation
+
+Epoch 0 processed 7,253 batches in approximately 48.0 minutes. Complete validation yielded lesion AP50:95 0.8023516774, lesion AP50 0.9743930101, overall F1 0.9725534734 and lesion TP/FP/FN 4,061/184/96. No checkpoint was saved. This is an interim observation; the run continues to its fixed 120-minute training budget and has no final keep/discard decision yet.
+
+Relative to H4 at the same epoch and same 7,253 batches, AP is lower by 0.0062591076 and overall F1 by 0.0004757686. This comparison matches the number of training batches and optimizer updates, unlike comparing the eventual run bests under different throughput. It remains one exploratory run per configuration.
+
+The read-only prediction diagnostic covers all 5,000 images and 4,157 lesions. Relative to the reference, H5 gains 11 best matches reaching IoU 0.5 and loses 28. Among the 4,050 lesions above that threshold in both runs, mean IoU changes by -0.0030028974. The smallest-area mutually matched subset changes by -0.0054948348, while the largest changes by +0.0010016095. The fraction of all lesions with a best match reaching IoU 0.9 is 0.646380 versus reference 0.670917; in the smallest quarter it is 0.503369 versus 0.549567. These summaries do not perform one-to-one matching or replace the official metric.
+
+After this evidence, move the already proposed deeper routing 19/29/39 ahead of the generic LR/regularization sweep, following the batch, partial-fusion and weighted-regression controls. Add the independent-pyramid boundary `fpn_topdown_scale=0` after deeper routing, motivated by the primary ViTDet ablation in `literature/vitdet_pyramid_notes.md`. Each future proposal still changes one field relative to the current recipe, with a separate exact protocol commit before launch. These policy changes leave the active H5 training unchanged. Diagnostic: `output/autoresearch_oct1_h5_epoch0_diagnostics.json`.
+
 ## H6: match the reference effective batch of 32
 
 The reference's stored configuration has `batch=4, accum=4`; its `train.log` and `scripts/run_lesion_resolution_ablation.sh` establish two GPU ranks. Its effective batch was therefore 32, while the four-GPU H1-H5 recipe has effective batch 64. Change only accumulation from 4 to 2 in the incumbent four-GPU recipe, retaining microbatch 4, frozen backbone, feature routing, learning rates, cosine horizon, loss, initialization and fixed training-time budget. The hypothesis is that restoring the reference effective batch and more frequent optimizer updates may improve the already strong detector. This is a batch-size test within the current continuation recipe, not a reproduction of the reference's entire original training run.
