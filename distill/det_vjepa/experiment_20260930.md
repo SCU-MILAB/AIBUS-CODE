@@ -50,3 +50,13 @@ Return to H1's 768-pixel recipe and the same reference checkpoint. Change only w
 ## H4: shorten the head-only cosine schedule
 
 Keep H3's 768-pixel input, frozen backbone, optimizer, loss, initialization checkpoint, batch and evaluation fixed. Change only `--epochs` from 6 to 2, which shortens the cosine learning-rate schedule while `--train_minutes 120` still enforces the same training-time budget. H3 fell from 0.8078456610 after one epoch to 0.8048499882 after the next 3,528 batches; an earlier learning-rate reduction may preserve localization quality or improve it. Compare the full-validation run-best score to H3 and to the global reference 0.8104124889. Save weights only above the global reference.
+
+### H4 restart after GPU recovery, 2026-10-01
+
+The GPU wait process exited during the device recovery; H4 had not started and no training log or run directory existed. With fewer concurrent jobs, two epochs might finish before the required 120-minute budget. Before starting, separate the cosine horizon from the epoch limit: `--cosine_epochs 2 --epochs 100 --train_minutes 120`. The schedule reaches its minimum after two epochs and stays there until the training budget expires. This preserves the preregistered two-epoch decay hypothesis while avoiding an early end caused by improved throughput. Ordinary runs retain their existing schedule when `--cosine_epochs` is zero.
+
+## User FPN result and next direction, 2026-10-01
+
+The existing `vjepa_giant_multidepth_768best` experiment uses block outputs 13/26/39 and has a best full-validation lesion AP50:95 of 0.8021312609 at epoch 1. Its overall F1 is 0.9746221842 versus 0.9717087891 for the reference checkpoint; lesion-only F1 computed from existing per-class precision/recall is 0.9688846338 versus 0.9654356061. This supports the user's observation of improved F1, while high-IoU AP remains lower. These are descriptive comparisons: the prior FPN run also changed learning rates, batch accumulation, layer decay and drop path, so it does not isolate the neck effect.
+
+After H4, prioritize a controlled FPN experiment from the reference checkpoint, changing one neck variable while retaining the encoder structure and forward behavior. Track the existing F1, per-class precision/recall and lesion AP50 alongside the primary lesion AP50:95. The checkpoint selection criterion remains lesion AP50:95. Confirm which FPN run the user meant before attributing their observation to this directory.

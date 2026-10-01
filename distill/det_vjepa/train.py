@@ -112,7 +112,7 @@ def build_optimizer(model, args, num_blocks):
 def lr_scale(step, total_steps, warmup_steps, min_ratio):
     if step < warmup_steps:
         return (step + 1) / max(warmup_steps, 1)
-    progress = (step - warmup_steps) / max(total_steps - warmup_steps, 1)
+    progress = min((step - warmup_steps) / max(total_steps - warmup_steps, 1), 1.0)
     return min_ratio + (1 - min_ratio) * 0.5 * (1 + math.cos(math.pi * progress))
 
 
@@ -248,6 +248,8 @@ def parse_args():
 
     # Optimisation
     p.add_argument('--epochs', type=int, default=20)
+    p.add_argument('--cosine_epochs', type=float, default=0,
+                   help='cosine schedule duration; 0 = use --epochs')
     p.add_argument('--batch', type=int, default=8, help='images per GPU')
     p.add_argument('--accum', type=int, default=1, help='gradient accumulation steps')
     p.add_argument('--lr_backbone', type=float, default=1e-5)
@@ -300,6 +302,10 @@ def main():
         raise ValueError('--rank_zero_timeout must be a finite positive number')
     if not math.isfinite(args.train_minutes) or args.train_minutes < 0:
         raise ValueError('--train_minutes must be finite and non-negative')
+    if not math.isfinite(args.cosine_epochs) or args.cosine_epochs < 0:
+        raise ValueError('--cosine_epochs must be finite and non-negative')
+    if args.cosine_epochs and args.cosine_epochs <= args.warmup_epochs:
+        raise ValueError('--cosine_epochs must exceed --warmup_epochs')
     rank, world_size, device, is_distributed = setup_distributed(args.device)
     # All ranks create this group in the same order, before rank-only work.
     rank_zero_group = create_rank_zero_group(args.rank_zero_timeout) if is_distributed else None
@@ -383,7 +389,7 @@ def main():
     # The final partial accumulation window still performs an optimizer step,
     # so this must be ceil rather than floor.
     steps_per_epoch = max(math.ceil(len(train_loader) / max(args.accum, 1)), 1)
-    total_steps = steps_per_epoch * args.epochs
+    total_steps = max(round(steps_per_epoch * (args.cosine_epochs or args.epochs)), 1)
     warmup_steps = int(steps_per_epoch * args.warmup_epochs)
 
     if log:

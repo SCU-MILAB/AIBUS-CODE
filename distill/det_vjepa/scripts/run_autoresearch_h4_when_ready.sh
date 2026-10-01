@@ -39,7 +39,7 @@ exec env CUDA_VISIBLE_DEVICES=0,1,2,3 torchrun --master_port=12465 --nproc_per_n
   --output_dir "$output" --exp_name "$exp" \
   --lesion_only --black_threshold 3 --selection_metric lesion_AP50_95 \
   --imgsz 768 --batch 4 --accum 4 --val_batch 4 \
-  --epochs 2 --lr_backbone 2e-6 --lr_head 2e-5 \
+  --epochs 100 --cosine_epochs 2 --lr_backbone 2e-6 --lr_head 2e-5 \
   --drop_path 0.1 --layer_decay 0.85 --weight_decay 0.05 \
   --warmup_epochs 0.1 --min_lr_ratio 0.01 --clip_grad 1.0 --reg_weight 1.0 \
   --val_every 1 --val_max_images 0 --final_val_max_images 0 \
