@@ -76,6 +76,19 @@ def setup_distributed(device_arg):
 # Optimizer: layer-wise LR decay over the backbone
 # ---------------------------------------------------------------------------
 
+def configure_trainability(model, freeze_backbone=False, head_train_scope='all'):
+    """Apply training masks without changing detector outputs or checkpoint keys."""
+    if head_train_scope not in ('all', 'box_projection'):
+        raise ValueError(f'unknown head train scope: {head_train_scope}')
+    if freeze_backbone:
+        model.backbone.requires_grad_(False)
+    if head_train_scope == 'box_projection':
+        model.neck.requires_grad_(False)
+        model.head.requires_grad_(False)
+        model.head.bbox_pred.requires_grad_(True)
+        model.head.scales.requires_grad_(True)
+
+
 def build_optimizer(model, args, num_blocks):
     """
     AdamW with layer-wise LR decay on the backbone.
@@ -246,6 +259,8 @@ def parse_args():
                    default=True, help='activation checkpointing in ViT blocks')
     p.add_argument('--freeze_backbone', action=argparse.BooleanOptionalAction,
                    default=False, help='train only the neck and detection head')
+    p.add_argument('--head_train_scope', choices=('all', 'box_projection'), default='all',
+                   help='box_projection freezes neck/head except bbox output convolution and level scales; backbone trainability is independent')
     p.add_argument('--amp', action=argparse.BooleanOptionalAction, default=True)
 
     # Optimisation
@@ -357,8 +372,11 @@ def main():
         fpn_topdown_scale=args.fpn_topdown_scale,
     ).to(device)
 
-    if args.freeze_backbone:
-        base_model.backbone.requires_grad_(False)
+    configure_trainability(base_model, args.freeze_backbone, args.head_train_scope)
+    if log:
+        print(f'head_train_scope={args.head_train_scope}; '
+              f'trainable parameters={sum(p.numel() for p in base_model.parameters() if p.requires_grad):,}',
+              flush=True)
 
     optimizer = build_optimizer(base_model, args, len(base_model.backbone.blocks))
     criterion = FCOSLoss(fpn_strides=tuple(args.fpn_strides),
@@ -383,6 +401,8 @@ def main():
             raise ValueError('resume checkpoint and --out_layers must use the same FPN mode; use --init_weights to change modes')
         if ckpt['args'].get('fpn_topdown_scale', 1.0) != args.fpn_topdown_scale:
             raise ValueError('resume requires the same --fpn_topdown_scale; use --init_weights to change fusion')
+        if ckpt['args'].get('head_train_scope', 'all') != args.head_train_scope:
+            raise ValueError('resume requires the same --head_train_scope; use --init_weights to change training masks')
         base_model.load_state_dict(ckpt['model'])
         optimizer.load_state_dict(ckpt['optimizer'])
         start_epoch = ckpt['epoch'] + 1

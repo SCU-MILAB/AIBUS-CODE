@@ -19,7 +19,7 @@ H5 = 'autoresearch_oct1_h5_multidepth'
 STOP = OUTPUT / 'autoresearch.stop'
 BASE_RECIPE = dict(fpn_topdown_scale=1.0, freeze_backbone=True, drop_path=0.1,
                    lr_head=2e-5, reg_weight=1.0, cosine_epochs=2.0, accum=4,
-                   out_layers=None, reg_centerness_weighted=False)
+                   out_layers=None, reg_centerness_weighted=False, head_train_scope='all')
 RATIONALES = {
     'out_layers': 'Route existing intermediate encoder outputs to the neck to test the user-observed FPN improvement under controlled optimization.',
     'fpn_topdown_scale': 'Balance coarse semantic features and fine lateral detail to improve high-IoU localization.',
@@ -30,6 +30,7 @@ RATIONALES = {
     'cosine_epochs': 'Align learning-rate decay with the fixed training-time budget.',
     'freeze_backbone': 'Test whether updating the encoder weights improves localization within the same time budget.',
     'accum': 'Test optimizer update frequency while retaining the same per-GPU microbatch and time budget.',
+    'head_train_scope': 'Restrict neck/head updates to bbox output convolution and level scales; with frozen backbone this preserves raw classification and centerness scores while adapting localization.',
 }
 
 
@@ -209,12 +210,14 @@ def proposals(incumbent):
     # Revisit the user's routing after a batch-size improvement; unchanged or
     # already tested combinations are skipped by the main loop.
     initial = [('accum', 2), ('out_layers', [13, 26, 39]),
+               ('head_train_scope', 'box_projection'),
                ('fpn_topdown_scale', .5), ('reg_centerness_weighted', True),
                ('out_layers', [19, 29, 39]), ('fpn_topdown_scale', 0.0),
                ('drop_path', 0.0), ('lr_head', 1e-5), ('reg_weight', 1.5),
                ('fpn_topdown_scale', .75), ('cosine_epochs', 1.0),
                ('freeze_backbone', False), ('reg_weight', 2.0),
                ('lr_head', 5e-6), ('fpn_topdown_scale', .25), ('cosine_epochs', 3.0),
+               ('head_train_scope', 'all'),
                ('out_layers', None)]
     yield from initial
     bounds = dict(fpn_topdown_scale=(0.0, 1.0), drop_path=(0.0, .2),

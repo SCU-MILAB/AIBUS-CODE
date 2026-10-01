@@ -116,7 +116,7 @@ Before the later fusion/loss tests, revisit `out_layers=13 26 39` when the curre
 
 H6 launched at 2026-10-01 12:24 UTC as `autoresearch_oct1_h6_accum`, following its exact protocol commit `5c72dc1`. Initialization and gate remained the original best checkpoint and 0.8104124888777733. Routing returned to the H4 control's final map (`out_layers=None`); accumulation alone changed 4→2 relative to that control. The schedule has 3,627 optimizer updates per full epoch and the same two-epoch cosine horizon. H6 is still running.
 
-## H7: reduce top-down FPN fusion strength
+## Queued: reduce top-down FPN fusion strength
 
 After H6, change only the incumbent recipe's neck top-down contribution from 1.0 to 0.5: `fine = lateral + 0.5 * upsample(coarse)`. This should retain more of each fine lateral feature when coarse features are propagated, and may improve localization of small lesions at high IoU. This is an exploratory hypothesis suggested by the FPN result and localization diagnostic, not a claim that the previous run isolated the cause of its lower AP.
 
@@ -124,7 +124,7 @@ Use the incumbent feature routing and accumulation (retain H5/H6 settings only i
 
 Initialize from the best validated detector available when H7 starts. Compare H7's full-5,000-image lesion AP50:95 to that checkpoint. Record existing overall F1, lesion precision/recall and AP50 as secondary diagnostics. Save weights only above the current best AP50:95; F1 does not replace the primary selection criterion.
 
-## H8: target-centerness-weighted box regression
+## Queued: target-centerness-weighted box regression
 
 The local loss currently averages GIoU equally over positive locations. The [FCOS authors' loss implementation](https://github.com/tianzhi0549/FCOS/blob/master/fcos_core/modeling/rpn/fcos/loss.py) passes target centerness into its regression loss and normalizes by the summed target weights; its [IoU/GIoU loss](https://github.com/tianzhi0549/FCOS/blob/master/fcos_core/layers/iou_loss.py) supports a weighted sum. This suggests testing whether more emphasis on central positive locations improves the boxes associated with higher detection scores.
 
@@ -141,3 +141,15 @@ The old FPN's average GT best-match IoU drops from 0.894181 to 0.885339, but thi
 The reference has 1,215 lesion predictions with confidence at least 0.8, versus 907 for the old FPN. Confidence-bin IoU averages concern different sets of predictions and cannot isolate a causal scoring or localization effect. H5 will provide the controlled feature-routing comparison; its exported predictions can distinguish coverage loss from paired localization changes. The old FPN's other training settings remain confounders.
 
 Diagnostic artifact: `output/autoresearch_fpn_diagnostics_20261001_v3.json`. To analyze a later export, run `python -m distill.det_vjepa.scripts.analyze_predictions --predictions <reference_best_prediction.csv> <candidate_epoch_prediction.csv> --output <new_path_inside_det_vjepa>`.
+
+## H6 interim evidence and prospective bbox projection test, 2026-10-01
+
+H6 epoch 0 completed 7,253 batches with full 5,000-image validation: lesion AP50:95 0.8084197864, overall F1 0.9727633819, lesion TP/FP/FN 4,066/188/91. It remains below the global checkpoint gate and continues to its full 120-minute budget; this is not a final keep/discard decision.
+
+The reference-paired diagnostic gains 3 best matches reaching IoU 0.5 and loses 15. Among the same 4,063 lesions reaching 0.5 in both runs, mean IoU difference is -0.0005884806; in the smallest-area mutually matched subset it is -0.0003846881. The smallest-quarter fraction reaching best-match IoU 0.9 is 0.538980 versus reference 0.549567. These descriptive, non-one-to-one summaries suggest that retaining score/feature behavior while adapting boxes is a useful separate hypothesis. Artifact: `output/autoresearch_oct1_h6_epoch0_diagnostics.json`.
+
+After H6 and any newly eligible 13/26/39 revisit, test `head_train_scope=box_projection` against the incumbent recipe's default `all`, before the fusion/loss proposals. Freeze neck, classification tower/logits, regression tower and centerness output; update only the existing bbox output convolution and per-level distance scales. With the incumbent frozen backbone and unchanged architecture, this makes 9,223 parameters trainable and preserves raw classification/centerness outputs for identical evaluation inputs. Geometry-dependent NMS results may change. Backbone trainability remains an independent flag; score preservation does not hold if a later experiment unfreezes it.
+
+This tests whether narrowly adapting box geometry avoids the confidence/coverage drift of broader continuation. It does not change the FCOS loss, score combination, decoder, anchors, encoder forward, model state keys, data, evaluation or 120-minute budget. Initialize from the verified global best and save only if full-validation lesion AP50:95 improves. The exact single-variable protocol is committed by the worker immediately before launch. Experiment numbers depend on conditional proposals.
+
+Verification: `python -m distill.det_vjepa.scripts.verify_box_projection` uses the real neck, FCOS head, optimizer and loss with a small CPU stand-in encoder. A positive-plus-empty batch yields finite gradients and changed boxes while all frozen weights and raw classification/centerness outputs remain exactly equal. An all-empty batch keeps all trainable parameters connected with zero gradients. Old state keys load strictly; default trainability and independently unfrozen backbone behavior are preserved. Actual CLI parsing, fixed evaluation/budget flags, legacy recipe normalization and global-best recovery also passed. Resume rejects a changed training scope and directs callers to fresh `--init_weights` instead.

@@ -1,6 +1,6 @@
 # 实验进展：H4/H5 完成，H6 有效 batch 32 正在训练
 
-更新时间：2026-10-01 12:29 UTC。实验分支：`autoresearch/sep30`。
+更新时间：2026-10-01 13:40 UTC。实验分支：`autoresearch/sep30`。
 
 ## 已完成结果
 
@@ -42,8 +42,8 @@ H5 的总批数也少于 H4 的 28,031，因为 GPU 竞争背景不同；两个 
 
 ## 当前与后续实验
 
-H6 已于 12:24 UTC 启动：`autoresearch_oct1_h6_accum`，协议提交 `5c72dc1`。它从原最佳权重初始化，回到默认 final-map 特征来源，相对 H4 控制设置只把 accumulation 从 4 改为 2。四卡、每卡 microbatch 4，对应有效 batch 32；其余冻结 backbone、768 输入、两 epoch cosine horizon、优化器和 120 分钟实际训练预算保持该控制设置。H6 尚无完整验证成绩。
+H6 已于 12:24 UTC 启动：`autoresearch_oct1_h6_accum`，协议提交 `5c72dc1`。它从原最佳权重初始化，回到默认 final-map 特征来源，相对 H4 控制设置只把 accumulation 从 4 改为 2。四卡、每卡 microbatch 4，对应有效 batch 32；其余冻结 backbone、768 输入、两 epoch cosine horizon、优化器和 120 分钟实际训练预算保持该控制设置。H6 首轮完整验证 AP 为 0.808419786，Overall F1 为 0.972763382，lesion TP/FP/FN 为 4,066/188/91；第二轮仍在训练。首轮尚未超过当前最佳值，不据此提前结束或作最终决策。
 
-如果 H6 改善主指标，再在新 incumbent 上复测 13/26/39。其后依次优先测试减弱 FPN top-down 融合、centerness 加权回归、更深的 19/29/39 特征来源和关闭 top-down 融合，再继续学习率及正则化实验。关闭融合的依据和适用限制见 [ViTDet 论文笔记](literature/vitdet_pyramid_notes.md)。每次仅改变一个主要变量，使用新的实验目录，超过当前最佳 AP 才保存和采用权重。
+如果 H6 改善主指标，再在新 incumbent 上复测 13/26/39。其后先测试只更新 bbox 输出卷积和各层缩放参数（9,223 个参数）：冻结其余 neck/head，冻结 backbone 时保持原分类与 centerness 原始输出，单独适配框几何。CPU 实际优化与空标注梯度检查已通过。这个假设来自 H6 首轮共同检出病灶的平均 IoU 只低约 0.00059、但净少 12 个 IoU 0.5 best matches 的诊断；该诊断不是官方 AP 或召回率。随后依次测试减弱 FPN top-down 融合、centerness 加权回归、更深的 19/29/39 特征来源和关闭 top-down 融合，再继续学习率及正则化实验。关闭融合的依据和适用限制见 [ViTDet 论文笔记](literature/vitdet_pyramid_notes.md)。每次仅改变一个主要变量，使用新的实验目录，超过当前最佳 AP 才保存和采用权重。
 
 持续循环的状态和操作见 [autoresearch_loop.md](autoresearch_loop.md)，数值台账见 [results.tsv](results.tsv)，完整协议与分析见 [experiment_20260930.md](experiment_20260930.md)。
