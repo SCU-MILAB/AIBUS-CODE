@@ -150,10 +150,13 @@ class SimpleFeaturePyramid(nn.Module):
     """
 
     def __init__(self, in_dim=EMBED_DIM, hidden_dim=256, strides=(8, 16, 32),
-                 base_stride=16):
+                 base_stride=16, topdown_scale=1.0):
         super().__init__()
         self.strides = tuple(strides)
         self.base_stride = base_stride
+        if not math.isfinite(topdown_scale) or not 0 <= topdown_scale <= 1:
+            raise ValueError('topdown_scale must be finite and in [0, 1]')
+        self.topdown_scale = topdown_scale
 
         laterals = []
         for s in self.strides:
@@ -199,7 +202,7 @@ class SimpleFeaturePyramid(nn.Module):
                 )
         feats = [lat(x) for lat, x in zip(self.laterals, inputs)]
         for i in range(len(feats) - 1, 0, -1):
-            feats[i - 1] = feats[i - 1] + F.interpolate(
+            feats[i - 1] = feats[i - 1] + self.topdown_scale * F.interpolate(
                 feats[i], size=feats[i - 1].shape[-2:], mode='nearest'
             )
         return [conv(f) for conv, f in zip(self.out_convs, feats)]
@@ -295,7 +298,7 @@ class VJepaDetector(nn.Module):
     def __init__(self, num_classes, resolution=640, num_frames=2,
                  checkpoint=None, fpn_strides=(8, 16, 32), fpn_dim=256,
                  head_convs=4, drop_path=0.0, grad_checkpoint=True,
-                 out_layers=None):
+                 out_layers=None, fpn_topdown_scale=1.0):
         super().__init__()
         self.num_classes = num_classes
         self.resolution = resolution
@@ -324,7 +327,8 @@ class VJepaDetector(nn.Module):
             out_layers=self.out_layers,
         )
         self.neck = SimpleFeaturePyramid(EMBED_DIM, fpn_dim, self.fpn_strides,
-                                         base_stride=PATCH_SIZE)
+                                         base_stride=PATCH_SIZE,
+                                         topdown_scale=fpn_topdown_scale)
         self.head = FCOSHead(num_classes, fpn_dim, head_convs, self.fpn_strides)
 
         # Anchor points / per-location stride — identical for every image at a

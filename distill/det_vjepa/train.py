@@ -234,6 +234,8 @@ def parse_args():
                    help='zero-based ViT block outputs, one per FPN level; '
                         'for example 13 26 39. Default: final block for every level')
     p.add_argument('--fpn_dim', type=int, default=256)
+    p.add_argument('--fpn_topdown_scale', type=float, default=1.0,
+                   help='weight of each top-down FPN contribution, in [0, 1]')
     p.add_argument('--head_convs', type=int, default=4)
     p.add_argument('--drop_path', type=float, default=0.0)
     p.add_argument('--lesion_only', action=argparse.BooleanOptionalAction, default=False,
@@ -346,6 +348,7 @@ def main():
         fpn_dim=args.fpn_dim, head_convs=args.head_convs,
         drop_path=args.drop_path, grad_checkpoint=args.grad_checkpoint,
         out_layers=args.out_layers,
+        fpn_topdown_scale=args.fpn_topdown_scale,
     ).to(device)
 
     if args.freeze_backbone:
@@ -371,6 +374,8 @@ def main():
              else tuple(ckpt['args']['out_layers']))
                 != (None if args.out_layers is None else tuple(args.out_layers))):
             raise ValueError('resume checkpoint and --out_layers must use the same FPN mode; use --init_weights to change modes')
+        if ckpt['args'].get('fpn_topdown_scale', 1.0) != args.fpn_topdown_scale:
+            raise ValueError('resume requires the same --fpn_topdown_scale; use --init_weights to change fusion')
         base_model.load_state_dict(ckpt['model'])
         optimizer.load_state_dict(ckpt['optimizer'])
         start_epoch = ckpt['epoch'] + 1
