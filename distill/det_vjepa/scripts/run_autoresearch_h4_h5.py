@@ -206,10 +206,10 @@ def run(exp, weights, gate, recipe, variable, previous):
 
 def proposals(incumbent):
     # First test the named hypotheses; then refine one coordinate at a time.
-    initial = [('fpn_topdown_scale', .5), ('reg_centerness_weighted', True),
+    initial = [('accum', 2), ('fpn_topdown_scale', .5), ('reg_centerness_weighted', True),
                ('drop_path', 0.0), ('lr_head', 1e-5), ('reg_weight', 1.5),
                ('fpn_topdown_scale', .75), ('cosine_epochs', 1.0),
-               ('freeze_backbone', False), ('accum', 2), ('reg_weight', 2.0),
+               ('freeze_backbone', False), ('reg_weight', 2.0),
                ('lr_head', 5e-6), ('fpn_topdown_scale', .25), ('cosine_epochs', 3.0),
                ('out_layers', [19, 29, 39]), ('out_layers', None)]
     yield from initial
