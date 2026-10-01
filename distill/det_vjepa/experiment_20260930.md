@@ -19,7 +19,7 @@ The training script change that enforces the time and checkpoint budget is run i
 
 - 4,024 training batches; 7,192.4 training seconds; all 5,000 validation images.
 - Lesion AP50:95 = 0.8066371396, below the reference by 0.0037753493. Peak allocated VRAM = 24,189.6 MiB per GPU.
-- No checkpoint was written. The shorter warmup did not improve the detector within this budget. No H1-specific model or loss code was changed; subsequent runs still initialize from the reference checkpoint.
+- No checkpoint was written. This exploratory continuation recipe did not improve the detector within this budget; warmup and effective batch changed together relative to the reference, so no isolated warmup conclusion is supported. No H1-specific model or loss code was changed; subsequent runs still initialize from the reference checkpoint.
 - The run shared the GPUs with one existing detector training job and, later, a second multi-depth detector job. `train_batches` documents the resulting throughput.
 
 ## Baseline error analysis for the next hypothesis
