@@ -88,6 +88,14 @@ The read-only prediction diagnostic covers all 5,000 images and 4,157 lesions. R
 
 After this evidence, move the already proposed deeper routing 19/29/39 ahead of the generic LR/regularization sweep, following the batch, partial-fusion and weighted-regression controls. Add the independent-pyramid boundary `fpn_topdown_scale=0` after deeper routing, motivated by the primary ViTDet ablation in `literature/vitdet_pyramid_notes.md`. Each future proposal still changes one field relative to the current recipe, with a separate exact protocol commit before launch. These policy changes leave the active H5 training unchanged. Diagnostic: `output/autoresearch_oct1_h5_epoch0_diagnostics.json`.
 
+### H5 interim evidence: second complete validation
+
+Epoch 1 processed another 7,253 batches in approximately 48.0 minutes. Lesion AP50:95 increased to 0.8036441788, overall F1 to 0.9732853354; lesion TP/FP/FN were 4,062/179/95. The run continued into the remaining approximately 24 minutes at its minimum LR, without a final decision or checkpoint.
+
+Both H4 and H5 had processed 14,506 batches at this point. H5 AP was lower by 0.0051487669, while overall F1 was lower by only 0.0001224436. Under this frozen-backbone continuation recipe, the remaining gap is chiefly in the primary high-IoU metric rather than a large F1 difference.
+
+The reference-paired diagnostic still found a deficit: 10 newly above-threshold best matches and 26 lost matches at IoU 0.5, mean IoU difference -0.0022362056 among the 4,052 mutually above-threshold lesions, and -0.0043440269 in the smallest-area mutually matched subset. Those conditional subsets can differ between epochs. The unconditioned smallest-quarter fraction reaching best-match IoU 0.9 rose from 0.503369 to 0.506256, versus reference 0.549567. Complete-training results are still required for acceptance. Diagnostic: `output/autoresearch_oct1_h5_epoch1_diagnostics.json`.
+
 ## H6: match the reference effective batch of 32
 
 The reference's stored configuration has `batch=4, accum=4`; its `train.log` and `scripts/run_lesion_resolution_ablation.sh` establish two GPU ranks. Its effective batch was therefore 32, while the four-GPU H1-H5 recipe has effective batch 64. Change only accumulation from 4 to 2 in the incumbent four-GPU recipe, retaining microbatch 4, frozen backbone, feature routing, learning rates, cosine horizon, loss, initialization and fixed training-time budget. The hypothesis is that restoring the reference effective batch and more frequent optimizer updates may improve the already strong detector. This is a batch-size test within the current continuation recipe, not a reproduction of the reference's entire original training run.
