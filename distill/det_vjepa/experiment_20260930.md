@@ -55,6 +55,15 @@ Keep H3's 768-pixel input, frozen backbone, optimizer, loss, initialization chec
 
 The GPU wait process exited during the device recovery; H4 had not started and no training log or run directory existed. With fewer concurrent jobs, two epochs might finish before the required 120-minute budget. Before starting, separate the cosine horizon from the epoch limit: `--cosine_epochs 2 --epochs 100 --train_minutes 120`. The schedule reaches its minimum after two epochs and stays there until the training budget expires. This preserves the preregistered two-epoch decay hypothesis while avoiding an early end caused by improved throughput. Ordinary runs retain their existing schedule when `--cosine_epochs` is zero.
 
+### H4 result, 2026-10-01
+
+- Completed 28,031 training batches: three full epochs of 7,253 batches and a final partial epoch of 6,272 batches. The budget stop flag was true; actual training was 7,185.2 seconds, total run time 8,042.0 seconds, and peak allocated VRAM 5,586.1 MiB per GPU.
+- All four validations covered 5,000 images. Lesion AP50:95 progressed through 0.8086107850, 0.8087929457, 0.8092858478 and 0.8094387755. The final epoch was also the run best.
+- The run best exceeds H3 by 0.0015931144 but remains 0.0009737134 below the global reference. Status is `discard`; no checkpoint was written. The reference initialization remains unchanged for H5.
+- Overall F1 at the best epoch is 0.9734178413. Lesion precision/recall are 0.9562867215/0.9788308877, with TP/FP/FN 4,069/186/88, compared with reference 4,078/213/79. F1 improved while AP did not pass the primary gate.
+- Early cosine decay followed by more low-LR updates yielded a steadier trajectory than H3 in this run. H4 also processed more batches and experienced changing GPU contention, so the cross-run difference does not isolate a pure schedule effect. It does not establish that frozen-backbone adaptation is unable to improve AP.
+- H5 launched at 2026-10-01 10:09 UTC, after result collection and its separate protocol commit `f5fc6d0`. It changes only feature routing relative to the preregistered H4 control recipe; H4's settings serve as that control, while checkpoint acceptance remains tied to the better original reference.
+
 ## User FPN result and next direction, 2026-10-01
 
 The existing `vjepa_giant_multidepth_768best` experiment uses block outputs 13/26/39 and has a best full-validation lesion AP50:95 of 0.8021312609 at epoch 1. Its overall F1 is 0.9746221842 versus 0.9717087891 for the reference checkpoint; lesion-only F1 computed from existing per-class precision/recall is 0.9688846338 versus 0.9654356061. This supports the user's observation of improved F1, while high-IoU AP remains lower. These are descriptive comparisons: the prior FPN run also changed learning rates, batch accumulation, layer decay and drop path, so it does not isolate the neck effect.
