@@ -1,6 +1,6 @@
 # Persistent detector experiment loop
 
-The loop runs on `autoresearch/sep30` using `scripts/run_autoresearch_h4_h5.py`. It first collects the already running H4, then tests the user-confirmed multi-depth FPN under the same optimization recipe (H5), matches the reference effective batch of 32 by accumulation 2 (H6), and halves the top-down fusion strength (H7).
+The loop runs on `autoresearch/sep30` using `scripts/run_autoresearch_h4_h5.py`. It first collects the already running H4, then tests the user-confirmed multi-depth FPN under the same optimization recipe (H5), matches the reference effective batch of 32 by accumulation 2 (H6), and halves the top-down fusion strength. After the batch test, it revisits routing 13/26/39 only if the incumbent checkpoint/recipe makes that combination new. This tests the user's FPN on an improved batch recipe without repeating the already tested combination. Experiment numbers after H6 depend on skipped or additional proposals.
 
 Every experiment uses four GPUs and a 120-minute training budget. Validation uses all 5,000 images from the fixed remapped dataset with lesion-only mode, black threshold 3, confidence 0.25 and NMS IoU 0.7. The primary metric is maximized lesion AP50:95. F1, lesion precision/recall and AP50 are diagnostics. Evaluation, dataset, postprocessing and encoder implementation are unchanged.
 

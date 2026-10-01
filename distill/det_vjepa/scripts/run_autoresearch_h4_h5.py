@@ -206,7 +206,10 @@ def run(exp, weights, gate, recipe, variable, previous):
 
 def proposals(incumbent):
     # First test the named hypotheses; then refine one coordinate at a time.
-    initial = [('accum', 2), ('fpn_topdown_scale', .5), ('reg_centerness_weighted', True),
+    # Revisit the user's routing after a batch-size improvement; unchanged or
+    # already tested combinations are skipped by the main loop.
+    initial = [('accum', 2), ('out_layers', [13, 26, 39]),
+               ('fpn_topdown_scale', .5), ('reg_centerness_weighted', True),
                ('drop_path', 0.0), ('lr_head', 1e-5), ('reg_weight', 1.5),
                ('fpn_topdown_scale', .75), ('cosine_epochs', 1.0),
                ('freeze_backbone', False), ('reg_weight', 2.0),

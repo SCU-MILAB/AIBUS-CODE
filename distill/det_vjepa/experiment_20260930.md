@@ -84,6 +84,8 @@ The reference's stored configuration has `batch=4, accum=4`; its `train.log` and
 
 Initialize from the current validated best; evaluate all 5,000 images and save only above the global AP gate. Preserve the H5 FPN control at accumulation 4 so the two hypotheses remain separate.
 
+Before the later fusion/loss tests, revisit `out_layers=13 26 39` when the current best checkpoint/recipe makes it an untested combination, for example after H6 accepts accumulation 2. Change only feature routing relative to that accepted recipe. If routing is already active or the same initialization/recipe was tested, skip it. The user's earlier FPN also had effective batch 32, motivating this conditional combination; it is not a full factorial test if both initial continuation recipes fail. Later experiment numbers may shift when this extra proposal actually runs.
+
 ## H7: reduce top-down FPN fusion strength
 
 After H6, change only the incumbent recipe's neck top-down contribution from 1.0 to 0.5: `fine = lateral + 0.5 * upsample(coarse)`. This should retain more of each fine lateral feature when coarse features are propagated, and may improve localization of small lesions at high IoU. This is an exploratory hypothesis suggested by the FPN result and localization diagnostic, not a claim that the previous run isolated the cause of its lower AP.
