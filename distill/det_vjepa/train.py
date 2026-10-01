@@ -262,6 +262,8 @@ def parse_args():
     p.add_argument('--min_lr_ratio', type=float, default=0.01)
     p.add_argument('--clip_grad', type=float, default=1.0)
     p.add_argument('--reg_weight', type=float, default=1.0, help='GIoU loss weight')
+    p.add_argument('--reg_centerness_weighted', action=argparse.BooleanOptionalAction,
+                   default=False, help='weight positive GIoU losses by target centerness')
     p.add_argument('--train_minutes', type=float, default=0,
                    help='training time budget in minutes; 0 = complete all epochs')
 
@@ -277,6 +279,8 @@ def parse_args():
                    default='lesion_AP50_95', help='validation metric used to select best.pt')
     p.add_argument('--iou_thres', type=float, default=0.7)
     p.add_argument('--save_period', type=int, default=0, help='epochs between snapshots')
+    p.add_argument('--export_epoch_predictions', action=argparse.BooleanOptionalAction,
+                   default=False, help='export full validation CSV after each epoch')
     p.add_argument('--save_min_score', type=float, default=-1,
                    help='save best.pt only above this full-validation selection score')
     p.add_argument('--resume', type=str, default='', help='checkpoint to resume from')
@@ -308,6 +312,8 @@ def main():
         raise ValueError('--cosine_epochs must be finite and non-negative')
     if args.cosine_epochs and args.cosine_epochs <= args.warmup_epochs:
         raise ValueError('--cosine_epochs must exceed --warmup_epochs')
+    if args.export_epoch_predictions and args.val_max_images:
+        raise ValueError('--export_epoch_predictions requires full validation (--val_max_images 0)')
     rank, world_size, device, is_distributed = setup_distributed(args.device)
     # All ranks create this group in the same order, before rank-only work.
     rank_zero_group = create_rank_zero_group(args.rank_zero_timeout) if is_distributed else None
@@ -356,7 +362,8 @@ def main():
 
     optimizer = build_optimizer(base_model, args, len(base_model.backbone.blocks))
     criterion = FCOSLoss(fpn_strides=tuple(args.fpn_strides),
-                         reg_weight=args.reg_weight).to(device)
+                         reg_weight=args.reg_weight,
+                         reg_centerness_weighted=args.reg_centerness_weighted).to(device)
 
     start_epoch = 0
     if args.init_weights:
@@ -442,6 +449,9 @@ def main():
                 group=rank_zero_group)
             if log:
                 m = record['val_partial']
+                if args.export_epoch_predictions:
+                    save_predictions(os.path.join(run_dir, f'epoch{epoch}_prediction.csv'),
+                                     val_predictions, class_names)
                 print(f'  val mAP50 {m["mAP50"]:.4f} mAP50-95 {m["mAP50_95"]:.4f} '
                       f'P {m["precision"]:.4f} R {m["recall"]:.4f} F1 {m["f1"]:.4f}',
                       flush=True)

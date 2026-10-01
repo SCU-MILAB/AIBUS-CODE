@@ -51,8 +51,8 @@ def sigmoid_focal_loss(logits, targets, alpha=0.25, gamma=2.0):
     return alpha_t * ce * (1 - p_t).pow(gamma)
 
 
-def paired_giou_loss(pred_xyxy, target_xyxy):
-    """1 - GIoU, averaged over the paired boxes."""
+def paired_giou_loss(pred_xyxy, target_xyxy, weights=None):
+    """1 - GIoU, optionally averaged with positive-target weights."""
     lt = torch.max(pred_xyxy[:, :2], target_xyxy[:, :2])
     rb = torch.min(pred_xyxy[:, 2:], target_xyxy[:, 2:])
     wh = (rb - lt).clamp(min=0)
@@ -70,13 +70,16 @@ def paired_giou_loss(pred_xyxy, target_xyxy):
     wh_c = (rb_c - lt_c).clamp(min=0)
     area_c = (wh_c[:, 0] * wh_c[:, 1]).clamp(min=1e-6)
 
-    return (1.0 - (iou - (area_c - union) / area_c)).mean()
+    loss = 1.0 - (iou - (area_c - union) / area_c)
+    if weights is None:
+        return loss.mean()
+    return (loss * weights).sum() / weights.sum().clamp(min=1e-6)
 
 
 class FCOSLoss(nn.Module):
     def __init__(self, fpn_strides=(8, 16, 32), center_radius=1.5,
                  focal_alpha=0.25, focal_gamma=2.0,
-                 reg_weight=1.0, ctr_weight=1.0):
+                 reg_weight=1.0, ctr_weight=1.0, reg_centerness_weighted=False):
         super().__init__()
         self.fpn_strides = tuple(fpn_strides)
         self.center_radius = center_radius
@@ -84,6 +87,7 @@ class FCOSLoss(nn.Module):
         self.focal_gamma = focal_gamma
         self.reg_weight = reg_weight
         self.ctr_weight = ctr_weight
+        self.reg_centerness_weighted = reg_centerness_weighted
         self.register_buffer('regress_ranges', regress_ranges_for(self.fpn_strides),
                              persistent=False)
 
@@ -181,7 +185,8 @@ class FCOSLoss(nn.Module):
             # are a factor of `stride` too large at inference.
             pred_boxes = ltrb_to_xyxy(points, dist[positive] * strides)
             reg_loss = paired_giou_loss(pred_boxes,
-                                        ltrb_to_xyxy(points, dist_t[positive]))
+                                        ltrb_to_xyxy(points, dist_t[positive]),
+                                        weights=ctr_t[positive] if self.reg_centerness_weighted else None)
             ctr_loss = F.binary_cross_entropy_with_logits(
                 ctr[positive], ctr_t[positive], reduction='sum') / num_pos
         else:

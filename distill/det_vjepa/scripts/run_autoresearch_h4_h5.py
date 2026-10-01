@@ -18,13 +18,15 @@ H4 = 'autoresearch_sep30_h4_headonly_cos2'
 H5 = 'autoresearch_oct1_h5_multidepth'
 STOP = OUTPUT / 'autoresearch.stop'
 BASE_RECIPE = dict(fpn_topdown_scale=1.0, freeze_backbone=True, drop_path=0.1,
-                   lr_head=2e-5, reg_weight=1.0, cosine_epochs=2.0, accum=4, out_layers=None)
+                   lr_head=2e-5, reg_weight=1.0, cosine_epochs=2.0, accum=4,
+                   out_layers=None, reg_centerness_weighted=False)
 RATIONALES = {
     'out_layers': 'Route existing intermediate encoder outputs to the neck to test the user-observed FPN improvement under controlled optimization.',
     'fpn_topdown_scale': 'Balance coarse semantic features and fine lateral detail to improve high-IoU localization.',
     'drop_path': 'Test whether stochastic depth during frozen-feature adaptation perturbs neck training.',
     'lr_head': 'Control adaptation of the already strong detection neck and head to reduce validation drift.',
     'reg_weight': 'Balance localization against classification and centerness to improve high-IoU boxes.',
+    'reg_centerness_weighted': 'Emphasize regression of positive locations with higher target centerness to improve localization of high-confidence boxes.',
     'cosine_epochs': 'Align learning-rate decay with the fixed training-time budget.',
     'freeze_backbone': 'Test whether updating the encoder weights improves localization within the same time budget.',
     'accum': 'Test optimizer update frequency while retaining the same per-GPU microbatch and time budget.',
@@ -139,10 +141,10 @@ def command_for(exp, weights, gate, recipe, port=12466):
                '--layer_decay', '0.85', '--weight_decay', '0.05', '--warmup_epochs', '0.1', '--min_lr_ratio', '0.01',
                '--clip_grad', '1.0', '--val_every', '1', '--val_max_images', '0', '--final_val_max_images', '0',
                '--conf_thres', '0.25', '--iou_thres', '0.7', '--save_period', '0', '--workers', '4', '--seed', '0',
-               '--train_minutes', '120', '--save_min_score', str(gate)]
+               '--train_minutes', '120', '--save_min_score', str(gate), '--export_epoch_predictions']
     for key, value in recipe.items():
-        if key == 'freeze_backbone':
-            command.append('--freeze_backbone' if value else '--no-freeze_backbone')
+        if isinstance(value, bool):
+            command.append(f'--{key}' if value else f'--no-{key}')
         elif key == 'out_layers':
             if value is not None:
                 command.extend(['--out_layers', *map(str, value)])
@@ -204,7 +206,8 @@ def run(exp, weights, gate, recipe, variable, previous):
 
 def proposals(incumbent):
     # First test the named hypotheses; then refine one coordinate at a time.
-    initial = [('fpn_topdown_scale', .5), ('drop_path', 0.0), ('lr_head', 1e-5), ('reg_weight', 1.5),
+    initial = [('fpn_topdown_scale', .5), ('reg_centerness_weighted', True),
+               ('drop_path', 0.0), ('lr_head', 1e-5), ('reg_weight', 1.5),
                ('fpn_topdown_scale', .75), ('cosine_epochs', 1.0),
                ('freeze_backbone', False), ('accum', 2), ('reg_weight', 2.0),
                ('lr_head', 5e-6), ('fpn_topdown_scale', .25), ('cosine_epochs', 3.0),
