@@ -54,7 +54,7 @@ def main():
                 ax.text(i + offset, v + (padding if v >= 0 else -padding), text,
                         ha='center', va='bottom' if v >= 0 else 'top', fontsize=9)
         ax.axhline(0, color='black', lw=.7)
-        ax.legend(frameon=False, loc='lower right', fontsize=9)
+        ax.legend(frameon=False, loc='lower right' if ax is axes[0] else 'lower left', fontsize=9)
     axes[0].set_title('A  Match coverage vs reference', loc='left')
     axes[0].set_ylabel('GT best matches reaching IoU 0.5')
     axes[0].set_ylim(-max(r['loss'] for r in rows) * 1.2 - 1, max(r['gain'] for r in rows) * 1.5 + 1)

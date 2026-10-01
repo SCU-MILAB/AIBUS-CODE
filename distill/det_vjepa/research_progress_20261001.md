@@ -1,6 +1,6 @@
 # 实验进展：H4/H5 完成，H6 有效 batch 32 正在训练
 
-更新时间：2026-10-01 13:46 UTC。实验分支：`autoresearch/sep30`。
+更新时间：2026-10-01 13:48 UTC。实验分支：`autoresearch/sep30`。
 
 ## 已完成结果
 
@@ -34,7 +34,7 @@ H5 从同一原最佳权重初始化，相对 H4 控制设置只改变 `out_laye
 
 H5 的总批数也少于 H4 的 28,031，因为 GPU 竞争背景不同；两个 run-best 的差值同时受固定时间内的数据曝光量影响。原 FPN 的其他训练设置不同，这轮结果不能否定整个多层特征方法。
 
-![匹配覆盖与定位变化：H6 仅为首轮中间结果](output/autoresearch_localization_20261001T1346.png)
+![匹配覆盖与定位变化：H6 仅为首轮中间结果](output/autoresearch_localization_20261001T1348.png)
 
 图中 IoU 诊断基于原标注的 best matches，无一对一匹配；共同匹配子集随候选模型变化，不能代替官方 AP 或召回率。绘图脚本为 `scripts/plot_localization_diagnostics.py`，PNG、SVG 和数值 JSON 均已保存。
 
