@@ -9,3 +9,4 @@ f5fc6d0	0.804101	5.5	discard	out_layers None to [13, 26, 39] at 768; 120 min
 844115a	0.810380	4.6	discard	head_train_scope all to box_projection at 768; 120 min
 df5734e	0.808157	5.5	discard	fpn_topdown_scale 1.0 to 0.5 at 768; 120 min
 973de59	0.809527	5.5	discard	reg_centerness_weighted False to True at 768; 120 min
+5420a28	0.806510	5.5	discard	out_layers None to [19, 29, 39] at 768; 120 min
