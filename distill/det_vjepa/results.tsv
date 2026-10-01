@@ -4,3 +4,4 @@ eecbd62	0.810412	0.0	keep	existing 768 checkpoint; peak memory not recorded
 d7d7549	0.804935	24.5	discard	increase input resolution to 896; 120 min
 7da3c5e	0.807846	5.5	discard	freeze backbone and train neck head at 768; 120 min
 8cf9341	0.809439	5.5	discard	shorten frozen-backbone cosine horizon to 2 epochs; 120 min
+f5fc6d0	0.804101	5.5	discard	out_layers None to [13, 26, 39] at 768; 120 min
