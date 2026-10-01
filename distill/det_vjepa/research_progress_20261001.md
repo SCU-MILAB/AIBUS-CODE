@@ -1,6 +1,6 @@
 # 实验进展：H4 完成、H5 多层 FPN 已启动
 
-更新时间：2026-10-01 10:19 UTC。实验分支：`autoresearch/sep30`。
+更新时间：2026-10-01 11:07 UTC。实验分支：`autoresearch/sep30`。
 
 ## 已完成结果
 
@@ -35,6 +35,8 @@ H4 lesion TP/FP/FN 为 4,069/186/88；参考模型为 4,078/213/79。它减少�
 
 H5 已于 10:09 UTC 启动：`autoresearch_oct1_h5_multidepth`，协议提交 `f5fc6d0`。它从原最佳权重初始化，相对 H4 控制设置只改变 `out_layers=13 26 39`，保留冻结 backbone、768 输入、两 epoch cosine horizon、有效 batch 64 和 120 分钟实际训练预算。每次完整验证都会导出预测，便于分析未通过门槛的实验。
 
-下一项为 accumulation 4→2，测试有效 batch 32。如果该设置改善主指标，再在新 incumbent 上复测 13/26/39；其余计划包括减弱 FPN top-down 融合、centerness 加权回归及更低 head 学习率。每次仅改变一个主要变量，使用新的实验目录，超过当前最佳 AP 才保存和采用权重。
+首轮完整验证 AP50:95 为 0.802351677、overall F1 为 0.972553473，尚未达到保存门槛；H5 仍在训练，没有最终 keep/discard 决策。配对诊断发现，相对参考净减少 17 个达到 IoU 0.5 的病灶匹配；共同检出病灶的平均 IoU 低约 0.00300，最小病灶组低约 0.00549，最大组略有提高。小病灶定位是目前需要重点检查的部分。
+
+下一项为 accumulation 4→2，测试有效 batch 32。如果该设置改善主指标，再在新 incumbent 上复测 13/26/39。其后依次优先测试减弱 FPN top-down 融合、centerness 加权回归、更深的 19/29/39 特征来源和关闭 top-down 融合，再继续学习率及正则化实验。关闭融合的依据和适用限制见 [ViTDet 论文笔记](literature/vitdet_pyramid_notes.md)。每次仅改变一个主要变量，使用新的实验目录，超过当前最佳 AP 才保存和采用权重。
 
 持续循环的状态和操作见 [autoresearch_loop.md](autoresearch_loop.md)，数值台账见 [results.tsv](results.tsv)，完整协议与分析见 [experiment_20260930.md](experiment_20260930.md)。
