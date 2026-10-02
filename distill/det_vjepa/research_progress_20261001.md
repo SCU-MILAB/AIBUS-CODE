@@ -1,6 +1,6 @@
-# 实验进展：H12 完成，H13 继续训练
+# 实验进展：H13 与两组 FPN 随机种子复跑进行中
 
-更新时间：2026-10-02 04:27 UTC。实验分支：`autoresearch/sep30`。
+更新时间：2026-10-02 06:31 UTC。实验分支：`autoresearch/sep30`。
 
 ## 已完成结果
 
@@ -58,3 +58,9 @@ H6 已于 12:24 UTC 启动：`autoresearch_oct1_h6_accum`，协议提交 `5c72dc
 H7–H11 的外层复盘与近门槛复跑方案见 [完整实验记录](experiment_20260930.md)。H6 未越过全局 AP 门槛，仍以原参考模型为 incumbent；本轮不重复已测过的 13/26/39 组合。H7 的 bbox-only 训练可训练 9,223 个参数，AP 达 0.810380359，仅差 0.000032130，但尚无新随机种子的复现。H12 的 drop path 消融也未改善 AP，虽然 F1 为当前高点 0.974495117。H13 正在测试 head 学习率 1e-5；随后优先以 seed=1 复跑 H7 配置，再继续学习率、正则化等实验。关闭融合的依据和适用限制见 [ViTDet 论文笔记](literature/vitdet_pyramid_notes.md)。每次仅改变一个主要变量，使用新的实验目录，超过当前最佳 AP 才保存和采用权重。
 
 持续循环的状态和操作见 [autoresearch_loop.md](autoresearch_loop.md)，数值台账见 [results.tsv](results.tsv)，完整协议与分析见 [experiment_20260930.md](experiment_20260930.md)。
+
+## 2026-10-02 06:31 UTC：并行复跑启动
+
+用户确认可利用空闲显存并行训练。H13 保持运行；另外从同一全局最佳 checkpoint 并行启动 H7 bbox-only FPN 配置的 seed=1 与 seed=2 重复，分别登记为 `autoresearch_oct1_h14_seed_1` 和 `autoresearch_oct2_h15_seed_2_parallel`。两者相对 H7 只改随机种子，训练范围为 9,223 个 bbox 投影参数；每个任务仍用四卡、768 输入、完整 5,000 张验证、120 分钟训练预算和 AP 0.8104124889 保存门槛。端口分别为 12467/12468，H13 使用 12466。
+
+启动时 H13 在 epoch 4、约 6,400/7,253 batch；已完成的完整验证最佳 AP 为 0.809914252（epoch 0），尚未达到门槛。两个重复刚完成初始化并进入 epoch 0。三组同时运行时每卡显存约用 18.7 GiB、仍空闲约 78.6 GiB；GPU 利用率约 96–97%。H14 由主调度器恢复和登记；seed=2 的 companion runner 会在 H14 收据出现后登记结果。完整训练和验证结束前不作保留决策。
