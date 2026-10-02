@@ -20,3 +20,4 @@ b1d4883	0.809914	5.5	discard	lr_head 2e-05 to 1e-05 at 768; 120 min
 9aafa57	0.810718	5.5	discard	accum 4 to 2 at 768; 120 min
 e5a6059	0.806302	5.5	discard	out_layers None to [13, 26, 39] at 768; 120 min
 d63b578	0.810535	4.6	discard	head_train_scope all to box_projection at 768; 120 min
+aadc047	0.810225	5.5	discard	fpn_topdown_scale 1.0 to 0.5 at 768; 120 min
