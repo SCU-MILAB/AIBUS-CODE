@@ -255,21 +255,35 @@ def value_slug(value):
 
 
 def recover_pending():
-    for protocol in sorted((DET / 'experiments').glob('autoresearch_oct1_h*/protocol.json')):
+    pending = []
+    for protocol in sorted((DET / 'experiments').glob('autoresearch_*/protocol.json')):
         saved = json.loads(protocol.read_text())
         exp = saved['experiment']
         receipt = OUTPUT / f'{exp}.result.json'
-        if receipt.exists() or not (OUTPUT / f'{exp}.log').exists():
+        if receipt.exists():
+            record_result(json.loads(receipt.read_text()))
+            continue
+        if not (OUTPUT / f'{exp}.log').exists():
             continue
         pid_file = OUTPUT / f'{exp}.pid'
         pid = int(pid_file.read_text()) if pid_file.exists() else 0
         report(f'recovering {exp}, PID {pid}')
-        while running(pid, exp):
-            time.sleep(50)
-        commit = git('log', '-1', '--format=%h', '--abbrev=7', '--', str(protocol.relative_to(ROOT)))
-        description = f'{saved["variable"]} {saved["previous"]} to {saved["proposed"]} at 768; 120 min'
-        result = collect(exp, commit, saved['checkpoint_gate'], description)
-        record_result(result)
+        pending.append((protocol, saved, pid))
+    # A single collector owns the ledger and git writes for all parallel runs.
+    # Collect whichever finishes first instead of waiting behind another run.
+    while pending:
+        for item in pending.copy():
+            protocol, saved, pid = item
+            exp = saved['experiment']
+            if running(pid, exp):
+                continue
+            commit = git('log', '-1', '--format=%h', '--abbrev=7', '--', str(protocol.relative_to(ROOT)))
+            description = f'{saved["variable"]} {saved["previous"]} to {saved["proposed"]} at 768; 120 min'
+            result = collect(exp, commit, saved['checkpoint_gate'], description)
+            record_result(result)
+            pending.remove(item)
+        if pending:
+            time.sleep(30)
 
 
 def known_best():
@@ -291,13 +305,13 @@ def known_best():
 
 def history():
     tested, last_number = set(), 5
-    for path in OUTPUT.glob('autoresearch_oct1_h*'):
-        match = re.match(r'autoresearch_oct1_h(\d+)_', path.name)
+    for path in OUTPUT.glob('autoresearch_*_h*'):
+        match = re.match(r'autoresearch_[^_]+_h(\d+)_', path.name)
         if match:
             last_number = max(last_number, int(match[1]))
-    for protocol in (DET / 'experiments').glob('autoresearch_oct1_h*/protocol.json'):
+    for protocol in (DET / 'experiments').glob('autoresearch_*/protocol.json'):
         saved = json.loads(protocol.read_text())
-        match = re.match(r'autoresearch_oct1_h(\d+)_', saved['experiment'])
+        match = re.match(r'autoresearch_[^_]+_h(\d+)_', saved['experiment'])
         if match:
             last_number = max(last_number, int(match[1]))
         if ((OUTPUT / f'{saved["experiment"]}.result.json').exists()
