@@ -26,7 +26,7 @@ def main():
                              f1=item['f1'], kind='run'))
             seen.add(item['run'])
     for path in OUTPUT.glob('autoresearch_*.result.json'):
-        match = re.search(r'autoresearch_(?:sep30|oct1)_h(\d+)_', path.stem)
+        match = re.search(r'autoresearch_[^_]+_h(\d+)_', path.stem)
         if not match:
             continue
         result = json.loads(path.read_text())
