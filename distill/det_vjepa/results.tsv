@@ -17,3 +17,4 @@ b1d4883	0.809914	5.5	discard	lr_head 2e-05 to 1e-05 at 768; 120 min
 909cd3e	0.810499	4.6	keep	seed 0 to 2 at 768; 120 min
 69e4713	0.810769	5.5	keep	center_radius 1.5 to 1.0 at 768; 120 min
 22c1d4c	0.810613	4.6	discard	bbox-only near-threshold repeat with seed 1; 120 min
+9aafa57	0.810718	5.5	discard	accum 4 to 2 at 768; 120 min
