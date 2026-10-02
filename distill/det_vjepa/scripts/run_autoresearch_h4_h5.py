@@ -300,7 +300,8 @@ def history():
         match = re.match(r'autoresearch_oct1_h(\d+)_', saved['experiment'])
         if match:
             last_number = max(last_number, int(match[1]))
-        if (OUTPUT / f'{saved["experiment"]}.result.json').exists():
+        if ((OUTPUT / f'{saved["experiment"]}.result.json').exists()
+                or (OUTPUT / f'{saved["experiment"]}.log').exists()):
             recipe = dict(BASE_RECIPE, **saved['recipe'])
             tested.add((saved['initialization'], json.dumps(recipe, sort_keys=True)))
     return tested, last_number + 1
