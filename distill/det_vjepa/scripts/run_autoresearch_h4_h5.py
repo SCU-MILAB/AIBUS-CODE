@@ -19,8 +19,9 @@ H5 = 'autoresearch_oct1_h5_multidepth'
 STOP = OUTPUT / 'autoresearch.stop'
 BASE_RECIPE = dict(fpn_topdown_scale=1.0, freeze_backbone=True, drop_path=0.1,
                    lr_head=2e-5, reg_weight=1.0, cosine_epochs=2.0, accum=4,
-                   out_layers=None, reg_centerness_weighted=False, head_train_scope='all', seed=0)
+                   out_layers=None, reg_centerness_weighted=False, head_train_scope='all', seed=0, center_radius=1.5)
 RATIONALES = {
+    'center_radius': 'Restrict training positives to locations nearer the GT center to test high-IoU localization versus coverage; evaluation and decoding are unchanged.',
     'out_layers': 'Route existing intermediate encoder outputs to the neck to test the user-observed FPN improvement under controlled optimization.',
     'fpn_topdown_scale': 'Balance coarse semantic features and fine lateral detail to improve high-IoU localization.',
     'drop_path': 'Test whether stochastic depth during frozen-feature adaptation perturbs neck training.',
@@ -216,7 +217,7 @@ def proposals(incumbent):
     # First test the named hypotheses; then refine one coordinate at a time.
     # Revisit the user's routing after a batch-size improvement; unchanged or
     # already tested combinations are skipped by the main loop.
-    initial = [('seed', 1), ('accum', 2), ('out_layers', [13, 26, 39]),
+    initial = [('seed', 1), ('center_radius', 1.0), ('accum', 2), ('out_layers', [13, 26, 39]),
                ('head_train_scope', 'box_projection'),
                ('fpn_topdown_scale', .5), ('reg_centerness_weighted', True),
                ('out_layers', [19, 29, 39]), ('fpn_topdown_scale', 0.0),

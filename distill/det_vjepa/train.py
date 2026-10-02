@@ -276,6 +276,8 @@ def parse_args():
     p.add_argument('--warmup_epochs', type=float, default=0.5)
     p.add_argument('--min_lr_ratio', type=float, default=0.01)
     p.add_argument('--clip_grad', type=float, default=1.0)
+    p.add_argument('--center_radius', type=float, default=1.5,
+                   help='training positive-assignment center radius in stride units')
     p.add_argument('--reg_weight', type=float, default=1.0, help='GIoU loss weight')
     p.add_argument('--reg_centerness_weighted', action=argparse.BooleanOptionalAction,
                    default=False, help='weight positive GIoU losses by target centerness')
@@ -321,6 +323,8 @@ def main():
         raise ValueError('--black_threshold must be in [0, 255]')
     if not math.isfinite(args.rank_zero_timeout) or args.rank_zero_timeout <= 0:
         raise ValueError('--rank_zero_timeout must be a finite positive number')
+    if not math.isfinite(args.center_radius) or args.center_radius <= 0:
+        raise ValueError('--center_radius must be finite and positive')
     if not math.isfinite(args.train_minutes) or args.train_minutes < 0:
         raise ValueError('--train_minutes must be finite and non-negative')
     if not math.isfinite(args.cosine_epochs) or args.cosine_epochs < 0:
@@ -380,6 +384,7 @@ def main():
 
     optimizer = build_optimizer(base_model, args, len(base_model.backbone.blocks))
     criterion = FCOSLoss(fpn_strides=tuple(args.fpn_strides),
+                         center_radius=args.center_radius,
                          reg_weight=args.reg_weight,
                          reg_centerness_weighted=args.reg_centerness_weighted).to(device)
 
