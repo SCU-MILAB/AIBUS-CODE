@@ -17,3 +17,7 @@ Runtime logs and receipts live in the ignored `output/` directory. The loop PID 
 On recovery, the loop checks pending protocols against their saved process IDs and experiment names, collects completed runs once, restores the highest verified accepted AP from all receipts, and resumes with an unused experiment number. Saved recipes are normalized to include later optional fields, so restarting after a policy update preserves the global best checkpoint and completed test history.
 
 The persistent process executes this registered experiment policy. Its later proposals follow the bounded refinement rules above; deeper code changes and new research directions can be introduced in an active agent session.
+
+## Queue refinement, 2026-10-02
+
+H7 came within 0.000032130 AP of the global gate but did not raise F1. After the already-running H13 head-LR experiment, repeat H7's `box_projection` training mask with seed 1 from the current global checkpoint. This changes only the seed relative to H7's recipe and measures the stability of the near-threshold score. The scheduler was restarted using saved process IDs; H13 continued uninterrupted. Completed H7-H12 results and the AP/F1 trajectory are in `research_progress_20261001.md` and `output/autoresearch_trajectory_latest.png`.

@@ -165,7 +165,7 @@ Changing top-down fusion from 1.0 to 0.5 or 0.0 produced AP 0.808157/0.805594. T
 
 ## H12: zero stochastic depth, completed 2026-10-02
 
-H12 changed only drop path from 0.1 to 0.0 with frozen backbone and final-map routing. It completed 7,185.2 training seconds, 36,906 batches, full validations, and peaked at 5,585.7 MiB/GPU. Best AP50:95 was 0.806630798 at epoch 0; its F1 there was 0.974495117, and epoch 5 final partial-validation AP was 0.805574872. This did not approach the incumbent AP and was discarded with no checkpoint. Result commit: `e0bf3ff`.
+H12 changed only drop path from 0.1 to 0.0 with frozen backbone and final-map routing. It completed 7,185.2 training seconds, 37,237 batches, full validations, and peaked at 5,585.7 MiB/GPU. Best AP50:95 was 0.806630798 at epoch 0; its F1 there was 0.974495117, and epoch 5 final partial-validation AP was 0.805574872. This did not approach the incumbent AP and was discarded with no checkpoint. Result commit: `e0bf3ff`.
 
 ## H13 and bbox-only repeat queued
 
