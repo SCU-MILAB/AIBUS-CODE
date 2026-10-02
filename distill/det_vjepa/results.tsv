@@ -11,3 +11,4 @@ df5734e	0.808157	5.5	discard	fpn_topdown_scale 1.0 to 0.5 at 768; 120 min
 973de59	0.809527	5.5	discard	reg_centerness_weighted False to True at 768; 120 min
 5420a28	0.806510	5.5	discard	out_layers None to [19, 29, 39] at 768; 120 min
 0334239	0.805594	5.5	discard	fpn_topdown_scale 1.0 to 0.0 at 768; 120 min
+0166e6f	0.806631	5.5	discard	drop_path 0.1 to 0.0 at 768; 120 min
