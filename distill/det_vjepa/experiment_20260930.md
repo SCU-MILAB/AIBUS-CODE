@@ -155,3 +155,18 @@ After H6 and any newly eligible 13/26/39 revisit, test `head_train_scope=box_pro
 This tests whether narrowly adapting box geometry avoids the confidence/coverage drift of broader continuation. It does not change the FCOS loss, score combination, decoder, anchors, encoder forward, model state keys, data, evaluation or 120-minute budget. Initialize from the verified global best and save only if full-validation lesion AP50:95 improves. The exact single-variable protocol is committed by the worker immediately before launch. Experiment numbers depend on conditional proposals.
 
 Verification: `python -m distill.det_vjepa.scripts.verify_box_projection` uses the real neck, FCOS head, optimizer and loss with a small CPU stand-in encoder. A positive-plus-empty batch yields finite gradients and changed boxes while all frozen weights and raw classification/centerness outputs remain exactly equal. An all-empty batch keeps all trainable parameters connected with zero gradients. Old state keys load strictly; default trainability and independently unfrozen backbone behavior are preserved. Actual CLI parsing, fixed evaluation/budget flags, legacy recipe normalization and global-best recovery also passed. Resume rejects a changed training scope and directs callers to fresh `--init_weights` instead.
+
+## H7-H11 outer-loop reflection, 2026-10-02
+
+Five four-GPU runs each completed the 120-minute budget and full 5,000-image validation. All remained below the original AP gate, so the reference weights remain incumbent. H7's bbox-only scope reached 0.810380359, only 0.000032130 below the reference, at 4,709 MiB peak VRAM; its F1 was 0.9715256. This is a close single-run exploratory result, not evidence of a reproducible gain. Retest the identical bbox-only recipe with seed 1 against the same reference checkpoint after the already-running H12 completes. Seed is the only change relative to H7; the repeat tests whether the near-threshold score survives a different initialization/data order.
+
+Changing top-down fusion from 1.0 to 0.5 or 0.0 produced AP 0.808157/0.805594. The controlled deeper routing 19/29/39 produced 0.806510. Centerness-weighted regression produced 0.809527, with higher F1 (0.973510) but lower AP than reference. These single exploratory trials suggest retaining full top-down fusion and prioritizing narrowly trainable box parameters; they do not rule out the full family of multi-depth FPN training setups, especially given the user's different original recipe.
+
+
+## H12: zero stochastic depth, completed 2026-10-02
+
+H12 changed only drop path from 0.1 to 0.0 with frozen backbone and final-map routing. It completed 7,185.2 training seconds, 36,906 batches, full validations, and peaked at 5,585.7 MiB/GPU. Best AP50:95 was 0.806630798 at epoch 0; its F1 there was 0.974495117, and epoch 5 final partial-validation AP was 0.805574872. This did not approach the incumbent AP and was discarded with no checkpoint. Result commit: `e0bf3ff`.
+
+## H13 and bbox-only repeat queued
+
+H13 is running the previously registered head learning-rate test (2e-5 to 1e-5) from the global reference. After H13, repeat H7's bbox-only trainability mask from the same global reference with seed 1; relative to the H7 recipe, seed is the only changed setting. This repeat is prioritized because H7 reached 0.810380359, 0.000032130 below the gate, in one run. It will be accepted only if its full validation exceeds the same global AP threshold. The policy update is committed before the H13 process ends; the scheduler restart preserves its saved process ID.

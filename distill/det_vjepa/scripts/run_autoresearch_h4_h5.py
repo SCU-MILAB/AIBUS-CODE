@@ -19,7 +19,7 @@ H5 = 'autoresearch_oct1_h5_multidepth'
 STOP = OUTPUT / 'autoresearch.stop'
 BASE_RECIPE = dict(fpn_topdown_scale=1.0, freeze_backbone=True, drop_path=0.1,
                    lr_head=2e-5, reg_weight=1.0, cosine_epochs=2.0, accum=4,
-                   out_layers=None, reg_centerness_weighted=False, head_train_scope='all')
+                   out_layers=None, reg_centerness_weighted=False, head_train_scope='all', seed=0)
 RATIONALES = {
     'out_layers': 'Route existing intermediate encoder outputs to the neck to test the user-observed FPN improvement under controlled optimization.',
     'fpn_topdown_scale': 'Balance coarse semantic features and fine lateral detail to improve high-IoU localization.',
@@ -31,6 +31,7 @@ RATIONALES = {
     'freeze_backbone': 'Test whether updating the encoder weights improves localization within the same time budget.',
     'accum': 'Test optimizer update frequency while retaining the same per-GPU microbatch and time budget.',
     'head_train_scope': 'Restrict neck/head updates to bbox output convolution and level scales; with frozen backbone this preserves raw classification and centerness scores while adapting localization.',
+    'seed': 'Repeat the near-threshold bbox-projection run with a new initialization/data-order seed to assess whether its AP is robust.',
 }
 
 
@@ -141,10 +142,13 @@ def command_for(exp, weights, gate, recipe, port=12466):
                '--imgsz', '768', '--batch', '4', '--val_batch', '4', '--epochs', '100', '--lr_backbone', '2e-6',
                '--layer_decay', '0.85', '--weight_decay', '0.05', '--warmup_epochs', '0.1', '--min_lr_ratio', '0.01',
                '--clip_grad', '1.0', '--val_every', '1', '--val_max_images', '0', '--final_val_max_images', '0',
-               '--conf_thres', '0.25', '--iou_thres', '0.7', '--save_period', '0', '--workers', '4', '--seed', '0',
+               '--conf_thres', '0.25', '--iou_thres', '0.7', '--save_period', '0', '--workers', '4',
+               '--seed', str(recipe.get('seed', 0)),
                '--train_minutes', '120', '--save_min_score', str(gate), '--export_epoch_predictions']
     for key, value in recipe.items():
-        if isinstance(value, bool):
+        if key == 'seed':
+            continue
+        elif isinstance(value, bool):
             command.append(f'--{key}' if value else f'--no-{key}')
         elif key == 'out_layers':
             if value is not None:
@@ -200,7 +204,10 @@ def run(exp, weights, gate, recipe, variable, previous):
                                    env=dict(os.environ, CUDA_VISIBLE_DEVICES='0,1,2,3'))
         (OUTPUT / f'{exp}.pid').write_text(str(process.pid) + '\n')
         process.wait()
-    result = collect(exp, commit, gate, f'{variable} {previous} to {recipe[variable]} at 768; 120 min')
+    description = (f'bbox-only near-threshold repeat with seed {recipe[variable]}; 120 min'
+                   if variable == 'seed' else
+                   f'{variable} {previous} to {recipe[variable]} at 768; 120 min')
+    result = collect(exp, commit, gate, description)
     record_result(result)
     return result
 
@@ -209,7 +216,7 @@ def proposals(incumbent):
     # First test the named hypotheses; then refine one coordinate at a time.
     # Revisit the user's routing after a batch-size improvement; unchanged or
     # already tested combinations are skipped by the main loop.
-    initial = [('accum', 2), ('out_layers', [13, 26, 39]),
+    initial = [('seed', 1), ('accum', 2), ('out_layers', [13, 26, 39]),
                ('head_train_scope', 'box_projection'),
                ('fpn_topdown_scale', .5), ('reg_centerness_weighted', True),
                ('out_layers', [19, 29, 39]), ('fpn_topdown_scale', 0.0),
@@ -322,15 +329,22 @@ def main():
         if STOP.exists():
             report('manual stop marker found; experiment loop stopped')
             return
-        recipe = dict(incumbent, **{variable: value})
+        if variable == 'seed':
+            # H7 nearly cleared the AP gate. Repeat its bbox-only recipe from
+            # the global checkpoint, changing only seed relative to that scope.
+            control = dict(incumbent, head_train_scope='box_projection')
+            recipe = dict(control, seed=value)
+        else:
+            control = incumbent
+            recipe = dict(incumbent, **{variable: value})
         signature = (str(weights), json.dumps(recipe, sort_keys=True))
-        if value == incumbent[variable] or signature in tested:
+        if value == control[variable] or signature in tested:
             continue
-        assert sum(recipe[key] != incumbent[key] for key in recipe) == 1
+        assert sum(recipe[key] != control[key] for key in recipe) == 1
         tested.add(signature)
         exp = f'autoresearch_oct1_h{number}_{variable}_{value_slug(value)}'
         number += 1
-        result = run(exp, weights, gate, recipe, variable, incumbent[variable])
+        result = run(exp, weights, gate, recipe, variable, control[variable])
         if result is None:
             return
         if result['status'] == 'keep' and result['score'] > gate:
