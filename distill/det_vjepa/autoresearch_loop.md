@@ -30,3 +30,12 @@ On 2026-10-02 at 06:27 UTC, the user authorized parallel runs because GPU memory
 The main queue now collects all `autoresearch_*/protocol.json` runs, including the oct2 seed-2 repeat, in completion order. The old companion collector has been terminated; its training children continue. One process owns result and git writes. Cross-date history prevents duplicate recipes and reusing H15. Queue stdout/stderr are redirected to the documented queue log and the PID file identifies the current detached process. An active agent goal keeps analysis and hypothesis development running alongside the scheduler until the user explicitly stops the loop.
 
 The next new queued variable is training `center_radius=1.0` versus legacy 1.5; its rationale and CPU verification are recorded in experiment_20260930.md. Existing runs retain their loaded code and configuration. The seed repeats use H7's final-map routing, not multi-depth 13/26/39.
+
+
+## Continuous parallel refill, 2026-10-03
+
+The active entry point is now `python -u -m distill.det_vjepa.scripts.run_parallel_autoresearch --max_parallel 4`. It adopts all unfinished registered experiments, collects completed ones independently, and fills each vacant slot from the highest verified completed incumbent. This replaces the previous wait-for-all recovery followed by a serial loop. Active and completed recipe signatures prevent duplicate work. Training remains four GPUs per experiment with 120-minute budget and full fixed evaluation.
+
+One collector holds an exclusive process lock. New launches use distinct available rendezvous ports, check free GPU memory (16,000 MiB for frozen backbone, 32,000 MiB for full tuning), and reserve disk space for concurrent checkpoints. Launches are spaced by at least 90 seconds to observe allocations before adding another model. Protocols include the exact control recipe and names of concurrent experiments. Keep/discard is measured against each run's registered launch gate; only the highest verified accepted checkpoint becomes the next global incumbent. Existing in-flight checkpoints are not adopted before completed-run validation.
+
+Checks verified discovery of the four real live jobs, completion-order collection without waiting for other jobs, pending-recipe deduplication, free-port selection, and a single-field next candidate. The training processes were preserved when switching collector ownership. PID/log paths stay `output/autoresearch_h4_h5.queue.pid` and `.queue.log`; the STOP marker drains active work before exiting.
