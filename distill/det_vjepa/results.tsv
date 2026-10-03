@@ -43,3 +43,4 @@ a204672	0.805019	4.6	discard	fpn_topdown_scale 1.0 to 0.5 at 768; 120 min
 5884396	0.810974	4.6	discard	reg_centerness_weighted False to True at 768; 120 min
 f9452cb	0.786810	4.7	discard	out_layers None to [19, 29, 39] at 768; 120 min
 7950478	0.721751	4.6	discard	fpn_topdown_scale 1.0 to 0.0 at 768; 120 min
+ba94b36	0.811205	4.6	discard	drop_path 0.1 to 0.0 at 768; 120 min
