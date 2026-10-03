@@ -25,3 +25,4 @@ b9a35e2	0.810249	5.5	discard	reg_centerness_weighted False to True at 768; 120 m
 8191eef	0.807605	5.5	discard	out_layers None to [19, 29, 39] at 768; 120 min
 d0cb572	0.808050	5.5	discard	fpn_topdown_scale 1.0 to 0.0 at 768; 120 min
 9285cb7	0.808269	5.5	discard	drop_path 0.1 to 0.0 at 768; 120 min
+112243f	0.810243	5.5	discard	lr_head 2e-05 to 1e-05 at 768; 120 min
