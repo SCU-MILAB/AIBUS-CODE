@@ -217,7 +217,8 @@ def proposals(incumbent):
     # First test the named hypotheses; then refine one coordinate at a time.
     # Revisit the user's routing after a batch-size improvement; unchanged or
     # already tested combinations are skipped by the main loop.
-    initial = [('seed', 1), ('center_radius', 1.0), ('accum', 2), ('out_layers', [13, 26, 39]),
+    initial = [('seed', 1), ('center_radius', 1.0), ('center_radius', .75),
+               ('center_radius', 1.25), ('accum', 2), ('out_layers', [13, 26, 39]),
                ('head_train_scope', 'box_projection'),
                ('fpn_topdown_scale', .5), ('reg_centerness_weighted', True),
                ('out_layers', [19, 29, 39]), ('fpn_topdown_scale', 0.0),
@@ -228,12 +229,12 @@ def proposals(incumbent):
                ('head_train_scope', 'all'),
                ('out_layers', None)]
     yield from initial
-    bounds = dict(fpn_topdown_scale=(0.0, 1.0), drop_path=(0.0, .2),
+    bounds = dict(center_radius=(.5, 2.0), fpn_topdown_scale=(0.0, 1.0), drop_path=(0.0, .2),
                   reg_weight=(.25, 4.0), cosine_epochs=(.2, 12.0))
-    widths = dict(fpn_topdown_scale=.25, drop_path=.05, reg_weight=.5, cosine_epochs=1.0)
+    widths = dict(center_radius=.25, fpn_topdown_scale=.25, drop_path=.05, reg_weight=.5, cosine_epochs=1.0)
     cycle = 0
     while True:
-        for key in ['lr_head', 'fpn_topdown_scale', 'reg_weight', 'cosine_epochs', 'drop_path']:
+        for key in ['center_radius', 'lr_head', 'fpn_topdown_scale', 'reg_weight', 'cosine_epochs', 'drop_path']:
             for direction in [-1, 1]:
                 if key == 'lr_head':
                     value = min(max(incumbent[key] * 2 ** (direction * 2 ** (-cycle / 2)), 1e-7), 1e-4)
