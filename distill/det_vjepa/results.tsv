@@ -34,3 +34,4 @@ d8336c9	0.811061	5.5	keep	center_radius 1.0 to 1.25 at 768; 120 min
 9dfbba0	0.811329	4.6	keep	seed 0 to 1 at 768; 120 min
 0895fd1	0.808678	5.5	discard	center_radius 1.25 to 1.0 at 768; 120 min
 77dc037	0.802563	5.5	discard	center_radius 1.25 to 0.75 at 768; 120 min
+2206b04	0.808510	5.5	discard	accum 4 to 2 at 768; 120 min
