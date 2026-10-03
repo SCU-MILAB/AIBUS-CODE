@@ -107,6 +107,40 @@ def launch(candidate, jobs, port):
     return dict(protocol=protocol, saved=saved, pid=process.pid, process=process)
 
 
+
+def write_status(jobs):
+    gate, weights, _ = core.known_best()
+    now = core.datetime.datetime.now(core.datetime.timezone.utc).isoformat()
+    lines = ['# Continuous experiment status', '', f'Updated: {now}', '',
+             f'Verified completed-run best AP50:95: **{gate:.10f}**',
+             f'Checkpoint: `{weights}`', '',
+             '## Active experiments', '',
+             '| Experiment | PID | Latest train or validation log |',
+             '|---|---:|---|']
+    active = []
+    for job in jobs:
+        name = job['saved']['experiment']
+        log_lines = (core.OUTPUT / f'{name}.log').read_text().splitlines()
+        progress = [line.strip() for line in log_lines
+                    if ('epoch ' in line and 'loss ' in line)
+                    or 'validation:' in line or 'lesion AP50 ' in line]
+        latest = progress[-1] if progress else 'initializing'
+        active.append(dict(experiment=name, pid=job['pid'], latest=latest))
+        lines.append(f'| {name} | {job["pid"]} | {latest.replace("|", "/")} |')
+    lines += ['', '## Recently completed', '',
+              '| Experiment | AP50:95 | Status versus launch gate | Training seconds | Batches |',
+              '|---|---:|---|---:|---:|']
+    receipts = sorted(core.OUTPUT.glob('autoresearch_*.result.json'), key=lambda p: p.stat().st_mtime)[-12:]
+    for path in receipts:
+        result = json.loads(path.read_text())
+        lines.append(f'| {result["experiment"]} | {result.get("score", 0):.10f} | {result["status"]} | {result.get("training_seconds", "")} | {result.get("train_batches", "")} |')
+    lines += ['', 'Interim metrics are not completed-run decisions. Each run uses the fixed full validation set and 120-minute training budget. Parallel jobs share compute and may process different numbers of batches.']
+    target = core.OUTPUT / 'autoresearch_live_status.md'
+    temporary = target.with_suffix('.tmp')
+    temporary.write_text('\n'.join(lines) + '\n')
+    temporary.replace(target)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--max_parallel', type=int, default=4)
@@ -149,6 +183,10 @@ def main():
                         next_launch = time.monotonic() + args.launch_gap_seconds
             if time.monotonic() >= heartbeat:
                 core.report('active: ' + ', '.join(f'{job["saved"]["experiment"]}:{job["pid"]}' for job in jobs))
+                try:
+                    write_status(jobs)
+                except OSError as error:
+                    core.report(f'status report IO error: {error}')
                 heartbeat = time.monotonic() + 300
             time.sleep(args.poll_seconds)
 
