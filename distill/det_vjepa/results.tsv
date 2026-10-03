@@ -40,3 +40,4 @@ d8336c9	0.811061	5.5	keep	center_radius 1.0 to 1.25 at 768; 120 min
 0a200b0	0.811049	4.6	discard	accum 4 to 2 at 768; 120 min
 bd5d523	0.776005	4.7	discard	out_layers None to [13, 26, 39] at 768; 120 min
 a204672	0.805019	4.6	discard	fpn_topdown_scale 1.0 to 0.5 at 768; 120 min
+5884396	0.810974	4.6	discard	reg_centerness_weighted False to True at 768; 120 min
