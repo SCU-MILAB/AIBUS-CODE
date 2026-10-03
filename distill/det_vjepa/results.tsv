@@ -28,3 +28,4 @@ d0cb572	0.808050	5.5	discard	fpn_topdown_scale 1.0 to 0.0 at 768; 120 min
 112243f	0.810243	5.5	discard	lr_head 2e-05 to 1e-05 at 768; 120 min
 8239060	0.810291	5.5	discard	reg_weight 1.0 to 1.5 at 768; 120 min
 24bfb17	0.805388	5.5	discard	center_radius 1.0 to 0.75 at 768; 120 min
+d8336c9	0.811061	5.5	keep	center_radius 1.0 to 1.25 at 768; 120 min
