@@ -15,6 +15,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--samples', type=int, default=512)
     parser.add_argument('--seed', type=int, default=20261002)
+    parser.add_argument('--radii', type=float, nargs='+', default=[1.0, 1.5])
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
@@ -32,7 +33,7 @@ def main():
         strides.append(torch.full((x.numel(),), float(stride)))
         levels.append(torch.full((x.numel(),), level, dtype=torch.long))
     points, strides, levels = map(torch.cat, (points, strides, levels))
-    losses = {r: FCOSLoss(center_radius=r) for r in (1.0, 1.5)}
+    losses = {r: FCOSLoss(center_radius=r) for r in args.radii}
     stats = {r: dict(positive_counts=[], centerness_sum=0., total_positive=0,
                     positive_by_level=[0, 0, 0], lesions_without_any_positive=0) for r in losses}
     lesions = negatives = 0
