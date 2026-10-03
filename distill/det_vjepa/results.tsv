@@ -30,3 +30,4 @@ d0cb572	0.808050	5.5	discard	fpn_topdown_scale 1.0 to 0.0 at 768; 120 min
 24bfb17	0.805388	5.5	discard	center_radius 1.0 to 0.75 at 768; 120 min
 d8336c9	0.811061	5.5	keep	center_radius 1.0 to 1.25 at 768; 120 min
 65468f1	0.803734	23.6	discard	freeze_backbone True to False at 768; 120 min
+0026ea5	0.809956	5.5	discard	cosine_epochs 2.0 to 1.0 at 768; 120 min
