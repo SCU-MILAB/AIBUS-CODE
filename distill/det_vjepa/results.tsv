@@ -45,3 +45,4 @@ f9452cb	0.786810	4.7	discard	out_layers None to [19, 29, 39] at 768; 120 min
 7950478	0.721751	4.6	discard	fpn_topdown_scale 1.0 to 0.0 at 768; 120 min
 ba94b36	0.811205	4.6	discard	drop_path 0.1 to 0.0 at 768; 120 min
 c0ade4f	0.811184	4.6	discard	lr_head 2e-05 to 1e-05 at 768; 120 min
+fe0394a	0.811158	4.6	discard	reg_weight 1.0 to 1.5 at 768; 120 min
