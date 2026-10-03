@@ -23,3 +23,4 @@ d63b578	0.810535	4.6	discard	head_train_scope all to box_projection at 768; 120 
 aadc047	0.810225	5.5	discard	fpn_topdown_scale 1.0 to 0.5 at 768; 120 min
 b9a35e2	0.810249	5.5	discard	reg_centerness_weighted False to True at 768; 120 min
 8191eef	0.807605	5.5	discard	out_layers None to [19, 29, 39] at 768; 120 min
+d0cb572	0.808050	5.5	discard	fpn_topdown_scale 1.0 to 0.0 at 768; 120 min
