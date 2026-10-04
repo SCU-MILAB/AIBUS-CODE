@@ -53,3 +53,4 @@ a469692	0.811390	23.5	keep	freeze_backbone True to False at 768; 120 min
 d575fd9	0.811058	4.6	discard	lr_head 2e-05 to 5e-06 at 768; 120 min
 20257b3	0.791446	23.5	discard	center_radius 1.25 to 1.0 at 768; 120 min
 046f69e	0.620653	23.5	discard	center_radius 1.25 to 0.75 at 768; 120 min
+85fe09c	0.809776	23.5	discard	accum 4 to 2 at 768; 120 min
