@@ -61,3 +61,4 @@ d575fd9	0.811058	4.6	discard	lr_head 2e-05 to 5e-06 at 768; 120 min
 88bb832	0.790888	23.5	discard	fpn_topdown_scale 1.0 to 0.0 at 768; 120 min
 27b3677	0.809968	23.5	discard	drop_path 0.1 to 0.0 at 768; 120 min
 7ec97b0	0.811323	23.5	discard	lr_head 2e-05 to 1e-05 at 768; 120 min
+33331d3	0.810773	23.5	discard	reg_weight 1.0 to 1.5 at 768; 120 min
