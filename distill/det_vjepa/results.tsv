@@ -48,3 +48,4 @@ c0ade4f	0.811184	4.6	discard	lr_head 2e-05 to 1e-05 at 768; 120 min
 fe0394a	0.811158	4.6	discard	reg_weight 1.0 to 1.5 at 768; 120 min
 80d0df2	0.809994	4.6	discard	fpn_topdown_scale 1.0 to 0.75 at 768; 120 min
 a469692	0.811390	23.5	keep	freeze_backbone True to False at 768; 120 min
+395e833	0.811084	4.6	discard	cosine_epochs 2.0 to 1.0 at 768; 120 min
