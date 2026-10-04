@@ -78,3 +78,4 @@ ae6a175	0.810544	23.5	discard	drop_path 0.1 to 0.05 at 768; 120 min
 caba4f1	0.609572	23.5	discard	center_radius 1.25 to 0.75 at 768; 120 min
 2745d77	0.809987	23.5	discard	accum 4 to 2 at 768; 120 min
 2d24180	0.789758	23.5	discard	out_layers None to [13, 26, 39] at 768; 120 min
+1656427	0.807010	23.5	discard	fpn_topdown_scale 1.0 to 0.5 at 768; 120 min
