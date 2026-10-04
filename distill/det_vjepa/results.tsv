@@ -70,3 +70,4 @@ b0b9e29	0.811195	23.5	discard	lr_head 2e-05 to 5e-06 at 768; 120 min
 6c8a51d	0.810603	23.5	discard	cosine_epochs 2.0 to 3.0 at 768; 120 min
 5c74a60	0.808227	23.6	discard	head_train_scope box_projection to all at 768; 120 min
 56d555c	0.806001	23.5	discard	center_radius 1.25 to 1.5 at 768; 120 min
+f9b1591	0.810480	23.5	discard	lr_head 2e-05 to 4e-05 at 768; 120 min
