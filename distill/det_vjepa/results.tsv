@@ -59,3 +59,4 @@ d575fd9	0.811058	4.6	discard	lr_head 2e-05 to 5e-06 at 768; 120 min
 2678794	0.810981	23.5	discard	reg_centerness_weighted False to True at 768; 120 min
 0c20430	0.793026	23.5	discard	out_layers None to [19, 29, 39] at 768; 120 min
 88bb832	0.790888	23.5	discard	fpn_topdown_scale 1.0 to 0.0 at 768; 120 min
+27b3677	0.809968	23.5	discard	drop_path 0.1 to 0.0 at 768; 120 min
