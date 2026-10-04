@@ -76,3 +76,4 @@ ae6a175	0.810544	23.5	discard	drop_path 0.1 to 0.05 at 768; 120 min
 442753b	0.811762	23.5	keep	drop_path 0.1 to 0.15 at 768; 120 min
 5a6057c	0.788862	23.5	discard	center_radius 1.25 to 1.0 at 768; 120 min
 caba4f1	0.609572	23.5	discard	center_radius 1.25 to 0.75 at 768; 120 min
+2745d77	0.809987	23.5	discard	accum 4 to 2 at 768; 120 min
