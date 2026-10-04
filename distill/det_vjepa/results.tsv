@@ -74,3 +74,4 @@ f9b1591	0.810480	23.5	discard	lr_head 2e-05 to 4e-05 at 768; 120 min
 f0fe39d	0.811891	23.5	keep	reg_weight 1.0 to 0.5 at 768; 120 min
 ae6a175	0.810544	23.5	discard	drop_path 0.1 to 0.05 at 768; 120 min
 442753b	0.811762	23.5	keep	drop_path 0.1 to 0.15 at 768; 120 min
+5a6057c	0.788862	23.5	discard	center_radius 1.25 to 1.0 at 768; 120 min
