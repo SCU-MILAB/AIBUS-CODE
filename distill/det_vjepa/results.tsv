@@ -112,3 +112,4 @@ c2b6ff1	0.810728	23.5	discard	cosine_epochs 2.0 to 2.70710678119 at 768; 120 min
 cb6263f	0.810886	23.5	discard	center_radius 1.25 to 1.375 at 768; 120 min
 9f11327	0.810292	23.5	discard	lr_head 2e-05 to 1.41421356237e-05 at 768; 120 min
 9c5f30c	0.810054	23.5	discard	lr_head 2e-05 to 2.82842712475e-05 at 768; 120 min
+1cdd2e8	0.809728	23.5	discard	fpn_topdown_scale 1.0 to 0.875 at 768; 120 min
