@@ -114,3 +114,4 @@ cb6263f	0.810886	23.5	discard	center_radius 1.25 to 1.375 at 768; 120 min
 9c5f30c	0.810054	23.5	discard	lr_head 2e-05 to 2.82842712475e-05 at 768; 120 min
 1cdd2e8	0.809728	23.5	discard	fpn_topdown_scale 1.0 to 0.875 at 768; 120 min
 f57352e	0.810047	23.5	discard	reg_weight 0.5 to 0.75 at 768; 120 min
+9a15e95	0.810561	23.5	discard	cosine_epochs 2.0 to 1.5 at 768; 120 min
