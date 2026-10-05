@@ -103,3 +103,4 @@ d012bba	0.808398	23.5	discard	center_radius 1.25 to 1.4267766953 at 768; 120 min
 b2487d2	0.810418	23.5	discard	lr_head 2e-05 to 1.22509465307e-05 at 768; 120 min
 1c9dd5a	0.809889	23.5	discard	lr_head 2e-05 to 3.26505383888e-05 at 768; 120 min
 302bf26	0.809178	23.5	discard	fpn_topdown_scale 1.0 to 0.823223304703 at 768; 120 min
+f388065	0.810356	23.5	discard	reg_weight 0.5 to 0.853553390593 at 768; 120 min
