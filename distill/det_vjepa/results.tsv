@@ -90,3 +90,4 @@ c69be98	0.810408	23.5	discard	drop_path 0.1 to 0.0 at 768; 120 min
 457609d	0.810411	23.5	discard	reg_weight 0.5 to 2.0 at 768; 120 min
 e06f1f6	0.810296	23.5	discard	lr_head 2e-05 to 5e-06 at 768; 120 min
 674c9b8	0.802418	23.5	discard	fpn_topdown_scale 1.0 to 0.25 at 768; 120 min
+105aefe	0.810195	23.5	discard	cosine_epochs 2.0 to 3.0 at 768; 120 min
