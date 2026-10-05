@@ -82,3 +82,4 @@ caba4f1	0.609572	23.5	discard	center_radius 1.25 to 0.75 at 768; 120 min
 958d3c0	0.810359	23.5	discard	reg_centerness_weighted False to True at 768; 120 min
 e4222ff	0.794219	23.5	discard	out_layers None to [19, 29, 39] at 768; 120 min
 00f073f	0.789372	23.5	discard	fpn_topdown_scale 1.0 to 0.0 at 768; 120 min
+c69be98	0.810408	23.5	discard	drop_path 0.1 to 0.0 at 768; 120 min
