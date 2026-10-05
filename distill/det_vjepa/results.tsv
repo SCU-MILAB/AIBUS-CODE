@@ -104,3 +104,4 @@ b2487d2	0.810418	23.5	discard	lr_head 2e-05 to 1.22509465307e-05 at 768; 120 min
 1c9dd5a	0.809889	23.5	discard	lr_head 2e-05 to 3.26505383888e-05 at 768; 120 min
 302bf26	0.809178	23.5	discard	fpn_topdown_scale 1.0 to 0.823223304703 at 768; 120 min
 f388065	0.810356	23.5	discard	reg_weight 0.5 to 0.853553390593 at 768; 120 min
+784fd5a	0.810189	23.5	discard	cosine_epochs 2.0 to 1.29289321881 at 768; 120 min
