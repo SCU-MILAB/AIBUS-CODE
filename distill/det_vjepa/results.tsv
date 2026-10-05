@@ -107,3 +107,4 @@ f388065	0.810356	23.5	discard	reg_weight 0.5 to 0.853553390593 at 768; 120 min
 784fd5a	0.810189	23.5	discard	cosine_epochs 2.0 to 1.29289321881 at 768; 120 min
 c2b6ff1	0.810728	23.5	discard	cosine_epochs 2.0 to 2.70710678119 at 768; 120 min
 8aa7422	0.810434	23.5	discard	drop_path 0.1 to 0.0646446609407 at 768; 120 min
+01b0101	0.810659	23.5	discard	drop_path 0.1 to 0.135355339059 at 768; 120 min
