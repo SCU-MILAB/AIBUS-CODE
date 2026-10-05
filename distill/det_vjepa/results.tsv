@@ -96,3 +96,4 @@ e06f1f6	0.810296	23.5	discard	lr_head 2e-05 to 5e-06 at 768; 120 min
 bd1af2e	0.810237	23.5	discard	lr_head 2e-05 to 4e-05 at 768; 120 min
 e8cb886	0.810372	23.5	discard	reg_weight 0.5 to 0.25 at 768; 120 min
 5d55ce6	0.810510	23.5	discard	reg_weight 0.5 to 1.0 at 768; 120 min
+7cff935	0.810322	23.5	discard	drop_path 0.1 to 0.05 at 768; 120 min
