@@ -944,3 +944,10 @@
 - Best lesion AP50:95: 0.8108863249; epoch: 0
 - Overall F1 at best AP: 0.9743054897; lesion precision/recall: 0.9605014191/0.9769064229
 - Training: 7185.2 seconds, 2988 batches; validation: 5,000 images
+
+## autoresearch_oct6_h139_reg_weight_0p625
+
+- Run commit: ac5a0df; status: discard
+- Best lesion AP50:95: 0.8100148484; epoch: 0
+- Overall F1 at best AP: 0.9741158623; lesion precision/recall: 0.9602649007/0.9766658648
+- Training: 7191.1 seconds, 3044 batches; validation: 5,000 images
