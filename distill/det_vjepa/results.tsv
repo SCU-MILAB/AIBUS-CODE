@@ -142,3 +142,4 @@ ac5a0df	0.810015	23.5	discard	reg_weight 0.5 to 0.625 at 768; 120 min
 c24a23b	0.809810	23.5	discard	cosine_epochs 2.0 to 1.75 at 768; 120 min
 10bc481	0.810324	23.5	discard	cosine_epochs 2.0 to 2.25 at 768; 120 min
 3230351	0.809504	23.5	discard	drop_path 0.1 to 0.0875 at 768; 120 min
+9db8597	0.810781	23.5	discard	drop_path 0.1 to 0.1125 at 768; 120 min
