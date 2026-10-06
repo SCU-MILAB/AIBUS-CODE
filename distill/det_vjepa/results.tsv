@@ -123,3 +123,4 @@ c709b49	0.810650	23.5	discard	drop_path 0.1 to 0.075 at 768; 120 min
 2d12bee	0.810384	23.5	discard	lr_head 2e-05 to 1.56530805471e-05 at 768; 120 min
 91e4fe8	0.810788	23.5	discard	lr_head 2e-05 to 2.55540753653e-05 at 768; 120 min
 b7cd1e7	0.810161	23.5	discard	fpn_topdown_scale 1.0 to 0.911611652352 at 768; 120 min
+d41b6fd	0.810894	23.5	discard	reg_weight 0.5 to 0.323223304703 at 768; 120 min
