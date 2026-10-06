@@ -146,3 +146,4 @@ c24a23b	0.809810	23.5	discard	cosine_epochs 2.0 to 1.75 at 768; 120 min
 5e39e31	0.809524	23.5	discard	center_radius 1.25 to 1.20580582618 at 768; 120 min
 30be0a7	0.811362	23.5	discard	center_radius 1.25 to 1.29419417382 at 768; 120 min
 7771377	0.810662	23.5	discard	lr_head 2e-05 to 1.76935471555e-05 at 768; 120 min
+24e4efb	0.810160	23.5	discard	lr_head 2e-05 to 2.26071118745e-05 at 768; 120 min
