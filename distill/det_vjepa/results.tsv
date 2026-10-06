@@ -131,3 +131,4 @@ a32b22e	0.808900	23.5	discard	seed 1 to 0 at 768; 120 min
 3e1434a	0.810275	23.5	discard	seed 1 to 2 at 768; 120 min
 117214e	0.809568	23.5	discard	cosine_epochs 2.0 to 2.35355339059 at 768; 120 min
 27c742c	0.810546	23.5	discard	drop_path 0.1 to 0.0823223304703 at 768; 120 min
+8ae46e8	0.810222	23.5	discard	drop_path 0.1 to 0.11767766953 at 768; 120 min
