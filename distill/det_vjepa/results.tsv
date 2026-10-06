@@ -116,3 +116,4 @@ cb6263f	0.810886	23.5	discard	center_radius 1.25 to 1.375 at 768; 120 min
 f57352e	0.810047	23.5	discard	reg_weight 0.5 to 0.75 at 768; 120 min
 9a15e95	0.810561	23.5	discard	cosine_epochs 2.0 to 1.5 at 768; 120 min
 bf08e5d	0.810553	23.5	discard	cosine_epochs 2.0 to 2.5 at 768; 120 min
+c709b49	0.810650	23.5	discard	drop_path 0.1 to 0.075 at 768; 120 min
