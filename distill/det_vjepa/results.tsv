@@ -126,3 +126,4 @@ b7cd1e7	0.810161	23.5	discard	fpn_topdown_scale 1.0 to 0.911611652352 at 768; 12
 d41b6fd	0.810894	23.5	discard	reg_weight 0.5 to 0.323223304703 at 768; 120 min
 c353a9c	0.810239	23.5	discard	reg_weight 0.5 to 0.676776695297 at 768; 120 min
 707a423	0.809072	23.5	discard	cosine_epochs 2.0 to 1.64644660941 at 768; 120 min
+cb0ae5b	0.810764	4.6	discard	freeze_backbone False to True at 768; 120 min
