@@ -136,3 +136,4 @@ a32b22e	0.808900	23.5	discard	seed 1 to 0 at 768; 120 min
 db88af2	0.810668	23.5	discard	center_radius 1.25 to 1.3125 at 768; 120 min
 cc08cc1	0.810757	23.5	discard	lr_head 2e-05 to 1.68179283051e-05 at 768; 120 min
 a970a7a	0.809694	23.5	discard	lr_head 2e-05 to 2.37841423001e-05 at 768; 120 min
+f7cc579	0.810524	23.5	discard	fpn_topdown_scale 1.0 to 0.9375 at 768; 120 min
