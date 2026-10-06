@@ -121,3 +121,4 @@ c709b49	0.810650	23.5	discard	drop_path 0.1 to 0.075 at 768; 120 min
 1eb608c	0.808866	23.5	discard	center_radius 1.25 to 1.16161165235 at 768; 120 min
 23ed5d9	0.811085	23.5	discard	center_radius 1.25 to 1.33838834765 at 768; 120 min
 2d12bee	0.810384	23.5	discard	lr_head 2e-05 to 1.56530805471e-05 at 768; 120 min
+91e4fe8	0.810788	23.5	discard	lr_head 2e-05 to 2.55540753653e-05 at 768; 120 min
