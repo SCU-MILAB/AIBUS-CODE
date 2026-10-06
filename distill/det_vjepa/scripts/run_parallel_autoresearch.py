@@ -50,7 +50,7 @@ def next_candidate():
     for count, (variable, value) in enumerate(core.proposals(incumbent)):
         if count >= 5000:
             return None
-        control = dict(incumbent, head_train_scope='box_projection') if variable == 'seed' else incumbent
+        control = incumbent
         recipe = dict(control, **{variable: value})
         if value == control[variable] or (str(weights), json.dumps(recipe, sort_keys=True)) in tested:
             continue
@@ -83,7 +83,9 @@ def launch(candidate, jobs, port):
         return None
     weights, gate = candidate['weights'], candidate['gate']
     assert weights.is_file() and Path('/home/lx/dataset/6cls_detection/data-2cls-remap.yaml').is_file()
-    name = f'autoresearch_oct3_h{candidate["number"]}_{variable}_{core.value_slug(candidate["value"])}'
+    now = core.datetime.datetime.now(core.datetime.timezone.utc)
+    tag = f'{now:%b}{now.day}'.lower()
+    name = f'autoresearch_{tag}_h{candidate["number"]}_{variable}_{core.value_slug(candidate["value"])}'
     protocol = core.DET / 'experiments' / name / 'protocol.json'
     log_path = core.OUTPUT / f'{name}.log'
     assert not protocol.exists() and not log_path.exists() and not (core.OUTPUT / name).exists()

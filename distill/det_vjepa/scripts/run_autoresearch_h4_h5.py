@@ -29,10 +29,10 @@ RATIONALES = {
     'reg_weight': 'Balance localization against classification and centerness to improve high-IoU boxes.',
     'reg_centerness_weighted': 'Emphasize regression of positive locations with higher target centerness to improve localization of high-confidence boxes.',
     'cosine_epochs': 'Align learning-rate decay with the fixed training-time budget.',
-    'freeze_backbone': 'Test whether updating the encoder weights improves localization within the same time budget.',
+    'freeze_backbone': 'Compare frozen versus trainable encoder weights from the current best checkpoint under the same time budget; freezing after successful encoder adaptation tests whether subsequent updates cause drift.',
     'accum': 'Test optimizer update frequency while retaining the same per-GPU microbatch and time budget.',
     'head_train_scope': 'Restrict neck/head updates to bbox output convolution and level scales; with frozen backbone this preserves raw classification and centerness scores while adapting localization.',
-    'seed': 'Repeat the near-threshold bbox-projection run with a new initialization/data-order seed to assess whether its AP is robust.',
+    'seed': 'Change only the random seed for continuation from the current best checkpoint to assess sensitivity to data order and training randomness; this is not an independent replication of the full winning lineage.',
 }
 
 
@@ -217,7 +217,8 @@ def proposals(incumbent):
     # First test the named hypotheses; then refine one coordinate at a time.
     # Revisit the user's routing after a batch-size improvement; unchanged or
     # already tested combinations are skipped by the main loop.
-    initial = [('seed', 1), ('center_radius', 1.0), ('center_radius', .75),
+    initial = [('freeze_backbone', True), ('seed', 0), ('seed', 2),
+               ('seed', 1), ('center_radius', 1.0), ('center_radius', .75),
                ('center_radius', 1.25), ('accum', 2), ('out_layers', [13, 26, 39]),
                ('head_train_scope', 'box_projection'),
                ('fpn_topdown_scale', .5), ('reg_centerness_weighted', True),
