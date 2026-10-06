@@ -128,3 +128,4 @@ c353a9c	0.810239	23.5	discard	reg_weight 0.5 to 0.676776695297 at 768; 120 min
 707a423	0.809072	23.5	discard	cosine_epochs 2.0 to 1.64644660941 at 768; 120 min
 cb0ae5b	0.810764	4.6	discard	freeze_backbone False to True at 768; 120 min
 a32b22e	0.808900	23.5	discard	seed 1 to 0 at 768; 120 min
+3e1434a	0.810275	23.5	discard	seed 1 to 2 at 768; 120 min
