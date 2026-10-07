@@ -170,3 +170,4 @@ adafa2f	0.809849	23.5	discard	center_radius 1.25 to 1.22790291309 at 768; 120 mi
 04bc8f0	0.000000	0.0	crash	User stopped stalled old loop: lr_backbone 2e-06 to 5e-07; incomplete budget, excluded
 fc7d38f	0.000000	0.0	crash	User stopped stalled old loop: lr_backbone 2e-06 to 4e-06; incomplete budget, excluded
 344a992	0.810690	23.5	discard	reg_l1_weight 0.0 to 0.25 at 768; 120 min
+426d8a8	0.809888	23.5	discard	reg_l1_weight 0.0 to 1.0 at 768; 120 min
