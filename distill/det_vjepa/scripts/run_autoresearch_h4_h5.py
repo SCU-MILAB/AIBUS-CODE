@@ -218,6 +218,9 @@ def run(exp, weights, gate, recipe, variable, previous):
 
 
 def proposals(incumbent):
+    # Shared-GPU runs stop before substantial decay with the two-epoch horizon.
+    # Keep the training-time budget fixed and test decay duration separately.
+    yield from [('cosine_epochs', 0.5), ('cosine_epochs', 0.25)]
     yield from [('reg_l1_weight', 0.25), ('reg_l1_weight', 1.0), ('reg_l1_weight', 0.5),
                 ('head_train_scope', 'box_tower')]
     # First test the named hypotheses; then refine one coordinate at a time.
