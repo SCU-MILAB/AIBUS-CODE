@@ -1145,3 +1145,8 @@
 
 - Run commit: 849c0b8; status: crash
 - Training failed or the fixed-budget/full-validation checks failed; see the run log and receipt.
+
+## autoresearch_oct7_h167_lr_backbone_5em07
+
+- Run commit: 04bc8f0; status: crash
+- Training failed or the fixed-budget/full-validation checks failed; see the run log and receipt.
