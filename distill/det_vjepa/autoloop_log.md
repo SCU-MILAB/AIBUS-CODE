@@ -1140,3 +1140,8 @@
 - Best lesion AP50:95: 0.8098489687; epoch: 0
 - Overall F1 at best AP: 0.9739262349; lesion precision/recall: 0.9602555004/0.9764253067
 - Training: 7192.8 seconds, 3012 batches; validation: 5,000 images
+
+## autoresearch_oct7_h168_lr_backbone_1em06
+
+- Run commit: 849c0b8; status: crash
+- Training failed or the fixed-budget/full-validation checks failed; see the run log and receipt.
