@@ -79,13 +79,15 @@ def paired_giou_loss(pred_xyxy, target_xyxy, weights=None):
 class FCOSLoss(nn.Module):
     def __init__(self, fpn_strides=(8, 16, 32), center_radius=1.5,
                  focal_alpha=0.25, focal_gamma=2.0,
-                 reg_weight=1.0, ctr_weight=1.0, reg_centerness_weighted=False):
+                 reg_weight=1.0, ctr_weight=1.0, reg_centerness_weighted=False,
+                 reg_l1_weight=0.0):
         super().__init__()
         self.fpn_strides = tuple(fpn_strides)
         self.center_radius = center_radius
         self.focal_alpha = focal_alpha
         self.focal_gamma = focal_gamma
         self.reg_weight = reg_weight
+        self.reg_l1_weight = reg_l1_weight
         self.ctr_weight = ctr_weight
         self.reg_centerness_weighted = reg_centerness_weighted
         self.register_buffer('regress_ranges', regress_ranges_for(self.fpn_strides),
@@ -184,9 +186,20 @@ class FCOSLoss(nn.Module):
             # loss must apply the same scaling, otherwise it trains boxes that
             # are a factor of `stride` too large at inference.
             pred_boxes = ltrb_to_xyxy(points, dist[positive] * strides)
-            reg_loss = paired_giou_loss(pred_boxes,
-                                        ltrb_to_xyxy(points, dist_t[positive]),
-                                        weights=ctr_t[positive] if self.reg_centerness_weighted else None)
+            target_boxes = ltrb_to_xyxy(points, dist_t[positive])
+            weights = ctr_t[positive] if self.reg_centerness_weighted else None
+            reg_loss = paired_giou_loss(pred_boxes, target_boxes, weights=weights)
+            if self.reg_l1_weight:
+                # Relative edge errors keep small and large lesions comparable.
+                # This training-only term adds no model state or decoding changes.
+                size = (target_boxes[:, 2:] - target_boxes[:, :2]).clamp(min=1.0)
+                normalizer = size.repeat(1, 2)
+                edge_loss = F.smooth_l1_loss(
+                    pred_boxes / normalizer, target_boxes / normalizer,
+                    beta=0.1, reduction='none').mean(dim=1)
+                edge_loss = (edge_loss.mean() if weights is None else
+                             (edge_loss * weights).sum() / weights.sum().clamp(min=1e-6))
+                reg_loss = reg_loss + self.reg_l1_weight * edge_loss
             ctr_loss = F.binary_cross_entropy_with_logits(
                 ctr[positive], ctr_t[positive], reduction='sum') / num_pos
         else:

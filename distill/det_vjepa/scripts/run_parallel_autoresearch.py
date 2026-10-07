@@ -152,7 +152,7 @@ def main():
     assert 1 <= args.max_parallel <= 4 and 0 < args.poll_seconds <= 60
     assert args.launch_gap_seconds >= 60
     os.chdir(core.ROOT)
-    assert core.git('branch', '--show-current') == 'autoresearch/sep30'
+    assert core.git('branch', '--show-current').startswith('autoresearch/')
     with (core.OUTPUT / 'autoresearch_parallel.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         pid_file = core.OUTPUT / 'autoresearch_h4_h5.queue.pid'
@@ -165,7 +165,7 @@ def main():
         pid_file.write_text(str(os.getpid()) + '\n')
         jobs = discover()
         core.report(f'adopted {len(jobs)} unfinished runs; continuous parallel limit={args.max_parallel}')
-        next_launch = time.monotonic() + args.launch_gap_seconds
+        next_launch = time.monotonic()
         heartbeat = 0.
         while True:
             for job in jobs:

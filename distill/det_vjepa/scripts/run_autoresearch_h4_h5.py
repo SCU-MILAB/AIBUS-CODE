@@ -20,8 +20,9 @@ STOP = OUTPUT / 'autoresearch.stop'
 BASE_RECIPE = dict(fpn_topdown_scale=1.0, freeze_backbone=True, drop_path=0.1,
                    lr_head=2e-5, reg_weight=1.0, cosine_epochs=2.0, accum=4,
                    out_layers=None, reg_centerness_weighted=False, head_train_scope='all', seed=0, center_radius=1.5,
-                   lr_backbone=2e-6, weight_decay=0.05)
+                   lr_backbone=2e-6, weight_decay=0.05, reg_l1_weight=0.0)
 RATIONALES = {
+    'reg_l1_weight': 'Add relative box-edge Smooth L1 supervision alongside GIoU to test whether direct boundary gradients improve high-IoU localization. No evaluation, inference or model state changes.',
     'center_radius': 'Restrict training positives to locations nearer the GT center to test high-IoU localization versus coverage; evaluation and decoding are unchanged.',
     'out_layers': 'Route existing intermediate encoder outputs to the neck to test the user-observed FPN improvement under controlled optimization.',
     'fpn_topdown_scale': 'Balance coarse semantic features and fine lateral detail to improve high-IoU localization.',
@@ -44,7 +45,7 @@ def git(*args):
 
 
 def commit_files(message, paths):
-    assert git('branch', '--show-current') == 'autoresearch/sep30'
+    assert git('branch', '--show-current').startswith('autoresearch/')
     relative = [str(path.relative_to(ROOT)) for path in paths]
     subprocess.run(['git', 'add', '--', *relative], cwd=ROOT, check=True)
     subprocess.run(['git', 'commit', '--only', '-m', message, '--', *relative], cwd=ROOT, check=True)
@@ -217,6 +218,8 @@ def run(exp, weights, gate, recipe, variable, previous):
 
 
 def proposals(incumbent):
+    yield from [('reg_l1_weight', 0.25), ('reg_l1_weight', 1.0), ('reg_l1_weight', 0.5),
+                ('head_train_scope', 'box_tower')]
     # First test the named hypotheses; then refine one coordinate at a time.
     # Revisit the user's routing after a batch-size improvement; unchanged or
     # already tested combinations are skipped by the main loop.

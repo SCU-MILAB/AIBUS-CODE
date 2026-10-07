@@ -78,15 +78,17 @@ def setup_distributed(device_arg):
 
 def configure_trainability(model, freeze_backbone=False, head_train_scope='all'):
     """Apply training masks without changing detector outputs or checkpoint keys."""
-    if head_train_scope not in ('all', 'box_projection'):
+    if head_train_scope not in ('all', 'box_projection', 'box_tower'):
         raise ValueError(f'unknown head train scope: {head_train_scope}')
     if freeze_backbone:
         model.backbone.requires_grad_(False)
-    if head_train_scope == 'box_projection':
+    if head_train_scope in ('box_projection', 'box_tower'):
         model.neck.requires_grad_(False)
         model.head.requires_grad_(False)
         model.head.bbox_pred.requires_grad_(True)
         model.head.scales.requires_grad_(True)
+        if head_train_scope == 'box_tower':
+            model.head.reg_tower.requires_grad_(True)
 
 
 def build_optimizer(model, args, num_blocks):
@@ -259,8 +261,8 @@ def parse_args():
                    default=True, help='activation checkpointing in ViT blocks')
     p.add_argument('--freeze_backbone', action=argparse.BooleanOptionalAction,
                    default=False, help='train only the neck and detection head')
-    p.add_argument('--head_train_scope', choices=('all', 'box_projection'), default='all',
-                   help='box_projection freezes neck/head except bbox output convolution and level scales; backbone trainability is independent')
+    p.add_argument('--head_train_scope', choices=('all', 'box_projection', 'box_tower'), default='all',
+                   help='box_projection trains bbox output and scales; box_tower also trains the regression tower; backbone trainability is independent')
     p.add_argument('--amp', action=argparse.BooleanOptionalAction, default=True)
 
     # Optimisation
@@ -279,6 +281,8 @@ def parse_args():
     p.add_argument('--center_radius', type=float, default=1.5,
                    help='training positive-assignment center radius in stride units')
     p.add_argument('--reg_weight', type=float, default=1.0, help='GIoU loss weight')
+    p.add_argument('--reg_l1_weight', type=float, default=0.0,
+                   help='training-only relative box-edge Smooth L1 weight in addition to GIoU')
     p.add_argument('--reg_centerness_weighted', action=argparse.BooleanOptionalAction,
                    default=False, help='weight positive GIoU losses by target centerness')
     p.add_argument('--train_minutes', type=float, default=0,
@@ -325,6 +329,8 @@ def main():
         raise ValueError('--rank_zero_timeout must be a finite positive number')
     if not math.isfinite(args.center_radius) or args.center_radius <= 0:
         raise ValueError('--center_radius must be finite and positive')
+    if not math.isfinite(args.reg_l1_weight) or args.reg_l1_weight < 0:
+        raise ValueError('--reg_l1_weight must be finite and non-negative')
     if not math.isfinite(args.train_minutes) or args.train_minutes < 0:
         raise ValueError('--train_minutes must be finite and non-negative')
     if not math.isfinite(args.cosine_epochs) or args.cosine_epochs < 0:
@@ -386,6 +392,7 @@ def main():
     criterion = FCOSLoss(fpn_strides=tuple(args.fpn_strides),
                          center_radius=args.center_radius,
                          reg_weight=args.reg_weight,
+                         reg_l1_weight=args.reg_l1_weight,
                          reg_centerness_weighted=args.reg_centerness_weighted).to(device)
 
     start_epoch = 0
