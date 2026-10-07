@@ -313,6 +313,8 @@ def parse_args():
     p.add_argument('--workers', type=int, default=8)
     p.add_argument('--log_every', type=int, default=50)
     p.add_argument('--seed', type=int, default=0)
+    p.add_argument('--sampler_seed', type=int, default=0,
+                   help='shared DDP training permutation seed; 0 preserves the existing order')
     return p.parse_args()
 
 
@@ -356,7 +358,8 @@ def main():
         print(f'train images {len(train_set)}, val images {len(val_set)}, '
               f'classes {class_names}', flush=True)
 
-    train_sampler = DistributedSampler(train_set, shuffle=True) if is_distributed else None
+    train_sampler = (DistributedSampler(train_set, shuffle=True, seed=args.sampler_seed)
+                     if is_distributed else None)
     train_loader = DataLoader(
         train_set, batch_size=args.batch, shuffle=train_sampler is None,
         sampler=train_sampler, num_workers=args.workers, collate_fn=collate_fn,
