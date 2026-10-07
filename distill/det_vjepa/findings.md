@@ -188,3 +188,5 @@ H184 weight_decay=.1 completed 3,008 microbatches in 7,187.5 summary training se
 Together with H182 wd0, these exploratory continuations provide no observed primary benefit over the incumbent wd=.05. Retain .05. Shared compute, different processed batches, partial epochs and single continuations prevent a claim of a universal regularization optimum or statistical superiority.
 
 Controller filled H183's slot at 22:58:27 UTC with H186 lr_head=1.88114577614e-5 (protocol bf81c32, PID 2201908). Verified sole changed recipe key is lr_head (from 2e-5), incumbent initialization and gate, 120-minute training and full validation. H185 remains in training; H184's result has been collected. Incumbent remains 0.8118909046053886.
+
+Controller filled H184's slot at 22:59:29 UTC with H187 lr_head=2.12636365067e-5 (protocol fdf4f73, PID 2205284). Verified sole changed recipe key is lr_head (from 2e-5), with incumbent initialization/gate, 120-minute training and full validation; the new process command line is live. H185/H186/H187 now occupy three parallel slots.
