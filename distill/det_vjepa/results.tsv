@@ -160,3 +160,4 @@ b7bd6fd	0.810021	23.5	discard	lr_head 2e-05 to 1.83400808641e-05 at 768; 120 min
 ff308f5	0.809879	23.5	discard	lr_head 2e-05 to 2.18101546533e-05 at 768; 120 min
 faa70d2	0.810429	23.5	discard	fpn_topdown_scale 1.0 to 0.96875 at 768; 120 min
 e0849b6	0.809982	23.5	discard	reg_weight 0.5 to 0.4375 at 768; 120 min
+31b1b4b	0.810575	23.5	discard	reg_weight 0.5 to 0.5625 at 768; 120 min
