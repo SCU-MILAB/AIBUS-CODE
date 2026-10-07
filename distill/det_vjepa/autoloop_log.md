@@ -1155,3 +1155,10 @@
 
 - Run commit: fc7d38f; status: crash
 - Training failed or the fixed-budget/full-validation checks failed; see the run log and receipt.
+
+## autoresearch_oct7_h170_reg_l1_weight_0p25
+
+- Run commit: 344a992; status: discard
+- Best lesion AP50:95: 0.8106899559; epoch: 0
+- Overall F1 at best AP: 0.9740431982; lesion precision/recall: 0.9593956563/0.9776280972
+- Training: 7186.2 seconds, 5016 batches; validation: 5,000 images
