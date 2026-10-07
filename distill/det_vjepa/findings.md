@@ -100,3 +100,11 @@ H173 changed only head_train_scope from box_projection to box_tower, with the ba
 Secondary AP50 delta -0.0001800 (TP -1), AP90 delta -0.0049323 (TP -5), AP95 delta -0.0077065 (TP -24). This single continuation gives no support for widening regression-tower updates under the current budget and initialization. It does not establish that this mask is universally inferior. Keep the incumbent box_projection mask.
 
 At 16:00:28 UTC the controller filled the released slot with H176 sampler_seed=17 (protocol f8d1c7a, PID 2118186); H174/H175 remain uninterrupted. Verified H176 differs only in sampler_seed, retaining model/augmentation seed 1, reg_l1_weight=0, reg_iou_alpha=1, full validation and 120-minute training. Current verified incumbent AP remains 0.8118909046053886.
+
+## H174/H175 completed: shorter schedules did not improve primary AP
+
+H174 cosine_epochs=0.5: AP50:95 0.8109193697571755, delta -0.0009715348; 7,189.8 training seconds and 3,032 microbatches. H175 cosine_epochs=0.25: AP50:95 0.8108279943466187, delta -0.0010629103; 7,191.7 seconds and 3,008 microbatches. Both completed the full 5,000-image validation and time budget; controller recorded discard (4e49fb9 / 9eeec80) and no best.pt was saved. Independent unchanged-metric replays reproduce all class AP and TP/FP/FN exactly. Audits: output/oct7_h174_ap_threshold_audit.json and output/oct7_h175_ap_threshold_audit.json.
+
+H174 AP90 rises 0.0026042 (+15 TP90), while AP95 falls 0.0018086 despite +3 TP95; H175 AP50 rises 0.0002936 (+1 TP50), while AP90/AP95 fall 0.0019935/0.0028562. Thus individual secondary diagnostics can improve without improving primary AP; short schedules have no observed overall advantage in these continuations. Retain incumbent cosine_epochs=2.0.
+
+The controller filled the slots with H177 sampler_seed=41 (f494c28, PID 2129264, 16:28:01 UTC) and H178 reg_iou_alpha=3 (4a8c5af, PID 2132655, 16:29:04 UTC); H176 seed17 remains uninterrupted. Each new protocol was verified to change only its named variable, retaining cosine_epochs=2, model/augmentation seed 1, reg_l1_weight=0, full validation and 120-minute training. H178 retains sampler seed 0; it does not combine the pending sampling hypothesis with Alpha-GIoU. The incumbent remains 0.8118909046053886.
