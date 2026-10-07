@@ -182,3 +182,4 @@ f494c28	0.810339	23.5	discard	sampler_seed 0 to 41 at 768; 120 min
 3d84d1e	0.810719	23.5	discard	head_train_scope box_projection to box_quality_projection at 768; 120 min
 f900596	0.811220	23.5	discard	lr_backbone 2e-06 to 1e-07 at 768; 120 min
 3065689	0.809666	23.5	discard	weight_decay 0.05 to 0.0 at 768; 120 min
+9167d80	0.809839	23.5	discard	weight_decay 0.05 to 0.01 at 768; 120 min
