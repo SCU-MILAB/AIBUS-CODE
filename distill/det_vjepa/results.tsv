@@ -158,3 +158,4 @@ a26ecb3	0.810284	23.5	discard	drop_path 0.1 to 0.0911611652352 at 768; 120 min
 4f0d37b	0.811103	23.5	discard	center_radius 1.25 to 1.28125 at 768; 120 min
 b7bd6fd	0.810021	23.5	discard	lr_head 2e-05 to 1.83400808641e-05 at 768; 120 min
 ff308f5	0.809879	23.5	discard	lr_head 2e-05 to 2.18101546533e-05 at 768; 120 min
+faa70d2	0.810429	23.5	discard	fpn_topdown_scale 1.0 to 0.96875 at 768; 120 min
