@@ -11,3 +11,5 @@ The paper applies power transformations separately to overlap and geometric pena
 Project hypothesis (unverified): replace only the GIoU power, first 1 to 3, retaining incumbent loss weights, training masks, initialization and evaluation. At IoU 0.9 the IoU-term gradient multiplier is 2.43; at 0.95 it is 2.7075. This may target the observed strict-IoU deficit but changes effective gradient magnitude and could hurt poorly localized examples.
 
 Do not exponentiate signed GIoU itself. Before execution verify alpha=1 equality, zero loss for perfect boxes, finite gradients for disjoint/degenerate predictions, and unchanged empty-target DDP connectivity. Keep the current H170 source untouched; implement after reviewing the new loss/mask experiments. Other detectors' results do not establish benefits here.
+
+Implemented on 2026-10-07 as training-only reg_iou_alpha with default 1.0 preserving original arithmetic. Candidate alpha=3 is queued after the sampler-order tests; no experiment result yet. Implementation checks are recorded in output/oct7_alpha_giou_implementation_checks.json and findings.md.

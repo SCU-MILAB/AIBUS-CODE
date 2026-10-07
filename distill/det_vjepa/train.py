@@ -283,6 +283,8 @@ def parse_args():
     p.add_argument('--reg_weight', type=float, default=1.0, help='GIoU loss weight')
     p.add_argument('--reg_l1_weight', type=float, default=0.0,
                    help='training-only relative box-edge Smooth L1 weight in addition to GIoU')
+    p.add_argument('--reg_iou_alpha', type=float, default=1.0,
+                   help='training-only Alpha-GIoU power; 1 preserves ordinary GIoU')
     p.add_argument('--reg_centerness_weighted', action=argparse.BooleanOptionalAction,
                    default=False, help='weight positive GIoU losses by target centerness')
     p.add_argument('--train_minutes', type=float, default=0,
@@ -333,6 +335,8 @@ def main():
         raise ValueError('--center_radius must be finite and positive')
     if not math.isfinite(args.reg_l1_weight) or args.reg_l1_weight < 0:
         raise ValueError('--reg_l1_weight must be finite and non-negative')
+    if not math.isfinite(args.reg_iou_alpha) or args.reg_iou_alpha < 1:
+        raise ValueError('--reg_iou_alpha must be finite and at least 1')
     if not math.isfinite(args.train_minutes) or args.train_minutes < 0:
         raise ValueError('--train_minutes must be finite and non-negative')
     if not math.isfinite(args.cosine_epochs) or args.cosine_epochs < 0:
@@ -396,6 +400,7 @@ def main():
                          center_radius=args.center_radius,
                          reg_weight=args.reg_weight,
                          reg_l1_weight=args.reg_l1_weight,
+                         reg_iou_alpha=args.reg_iou_alpha,
                          reg_centerness_weighted=args.reg_centerness_weighted).to(device)
 
     start_epoch = 0

@@ -51,8 +51,8 @@ def sigmoid_focal_loss(logits, targets, alpha=0.25, gamma=2.0):
     return alpha_t * ce * (1 - p_t).pow(gamma)
 
 
-def paired_giou_loss(pred_xyxy, target_xyxy, weights=None):
-    """1 - GIoU, optionally averaged with positive-target weights."""
+def paired_giou_loss(pred_xyxy, target_xyxy, weights=None, alpha=1.0):
+    """GIoU or Alpha-GIoU, optionally averaged with positive-target weights."""
     lt = torch.max(pred_xyxy[:, :2], target_xyxy[:, :2])
     rb = torch.min(pred_xyxy[:, 2:], target_xyxy[:, 2:])
     wh = (rb - lt).clamp(min=0)
@@ -70,7 +70,11 @@ def paired_giou_loss(pred_xyxy, target_xyxy, weights=None):
     wh_c = (rb_c - lt_c).clamp(min=0)
     area_c = (wh_c[:, 0] * wh_c[:, 1]).clamp(min=1e-6)
 
-    loss = 1.0 - (iou - (area_c - union) / area_c)
+    penalty = (area_c - union) / area_c
+    # Preserve the original arithmetic at alpha=1. Power overlap and penalty
+    # separately (Alpha-IoU, Eq. 4); signed GIoU must not be exponentiated.
+    loss = (1.0 - (iou - penalty) if alpha == 1.0 else
+            1.0 - iou.clamp(0, 1).pow(alpha) + penalty.clamp(0, 1).pow(alpha))
     if weights is None:
         return loss.mean()
     return (loss * weights).sum() / weights.sum().clamp(min=1e-6)
@@ -80,7 +84,7 @@ class FCOSLoss(nn.Module):
     def __init__(self, fpn_strides=(8, 16, 32), center_radius=1.5,
                  focal_alpha=0.25, focal_gamma=2.0,
                  reg_weight=1.0, ctr_weight=1.0, reg_centerness_weighted=False,
-                 reg_l1_weight=0.0):
+                 reg_l1_weight=0.0, reg_iou_alpha=1.0):
         super().__init__()
         self.fpn_strides = tuple(fpn_strides)
         self.center_radius = center_radius
@@ -88,6 +92,7 @@ class FCOSLoss(nn.Module):
         self.focal_gamma = focal_gamma
         self.reg_weight = reg_weight
         self.reg_l1_weight = reg_l1_weight
+        self.reg_iou_alpha = reg_iou_alpha
         self.ctr_weight = ctr_weight
         self.reg_centerness_weighted = reg_centerness_weighted
         self.register_buffer('regress_ranges', regress_ranges_for(self.fpn_strides),
@@ -188,7 +193,8 @@ class FCOSLoss(nn.Module):
             pred_boxes = ltrb_to_xyxy(points, dist[positive] * strides)
             target_boxes = ltrb_to_xyxy(points, dist_t[positive])
             weights = ctr_t[positive] if self.reg_centerness_weighted else None
-            reg_loss = paired_giou_loss(pred_boxes, target_boxes, weights=weights)
+            reg_loss = paired_giou_loss(pred_boxes, target_boxes, weights=weights,
+                                        alpha=self.reg_iou_alpha)
             if self.reg_l1_weight:
                 # Relative edge errors keep small and large lesions comparable.
                 # This training-only term adds no model state or decoding changes.
