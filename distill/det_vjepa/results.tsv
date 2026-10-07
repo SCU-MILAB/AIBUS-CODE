@@ -174,3 +174,4 @@ fc7d38f	0.000000	0.0	crash	User stopped stalled old loop: lr_backbone 2e-06 to 4
 b4a9304	0.810604	23.5	discard	reg_l1_weight 0.0 to 0.5 at 768; 120 min
 58f59a0	0.809806	23.5	discard	head_train_scope box_projection to box_tower at 768; 120 min
 442a1a8	0.810919	23.5	discard	cosine_epochs 2.0 to 0.5 at 768; 120 min
+717c7dc	0.810828	23.5	discard	cosine_epochs 2.0 to 0.25 at 768; 120 min
