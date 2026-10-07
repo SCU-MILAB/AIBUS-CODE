@@ -154,3 +154,12 @@ H179 ctr_target=iou completed 3,032 microbatches, 7,188.7 summary training secon
 This tests detached IoU labels under the existing box_projection mask and cls-times-centerness decoding; it neither reproduces full GFL nor isolates ranking from encoder-mediated localization changes. Moving labels and frozen output-projection capacity are plausible mechanisms, not established causes. Retain geometric centerness labels. Ongoing H180 changes only existing centerness-output trainability with geometric labels; do not combine the failed labels with its pending mask.
 
 Controller filled the slot at 20:20:46 UTC with H182 weight_decay=0 (protocol 3065689, PID 2167995). Verified only weight_decay changes from .05 to 0; initialization, geometric labels, box_projection scope, 120-minute training and full validation remain incumbent settings. H180/H181 continue uninterrupted. Incumbent remains 0.8118909046053886.
+
+
+## Existing centerness-output trainability does not improve primary AP
+
+H180 head_train_scope=box_quality_projection completed 3,004 microbatches in 7,188.3 summary training seconds, reaching the budget and validating all 5,000 images. lesion_AP50_95=0.8107191517949104, delta -0.0011717528104782104 versus incumbent; discard, no best.pt, controller result commit ca82785. Independent replay of the saved predictions through unchanged metric.py exactly matches both-class AP50/AP50:95, GT and TP/FP/FN (output/oct7_h180_ap_threshold_audit.json).
+
+AP50 falls -0.000954509 (TP -4); AP90 changes only +0.000001848 (TP +5) and AP95 falls -0.000047415 (TP +3). More strict-threshold true positives do not establish better ranking or primary AP. Training the existing centerness output with geometric labels offers no observed primary benefit in this single fixed-budget continuation. Retain box_projection; this does not test a combined IoU-label/output-mask change or establish a general limitation of quality supervision. Concurrent compute sharing and the partial epoch remain interpretation limits.
+
+Controller filled the slot at 20:48:19 UTC with H183 weight_decay=0.01 (protocol 9167d80, PID 2178098). Verified that only weight_decay changes from .05 to .01, retaining incumbent initialization, geometric labels, box_projection scope, sampler0, alpha1, 120-minute training and full validation. H181 remains in validation and H182 in training. Incumbent remains 0.8118909046053886.
