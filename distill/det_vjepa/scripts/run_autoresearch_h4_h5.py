@@ -19,13 +19,16 @@ H5 = 'autoresearch_oct1_h5_multidepth'
 STOP = OUTPUT / 'autoresearch.stop'
 BASE_RECIPE = dict(fpn_topdown_scale=1.0, freeze_backbone=True, drop_path=0.1,
                    lr_head=2e-5, reg_weight=1.0, cosine_epochs=2.0, accum=4,
-                   out_layers=None, reg_centerness_weighted=False, head_train_scope='all', seed=0, center_radius=1.5)
+                   out_layers=None, reg_centerness_weighted=False, head_train_scope='all', seed=0, center_radius=1.5,
+                   lr_backbone=2e-6, weight_decay=0.05)
 RATIONALES = {
     'center_radius': 'Restrict training positives to locations nearer the GT center to test high-IoU localization versus coverage; evaluation and decoding are unchanged.',
     'out_layers': 'Route existing intermediate encoder outputs to the neck to test the user-observed FPN improvement under controlled optimization.',
     'fpn_topdown_scale': 'Balance coarse semantic features and fine lateral detail to improve high-IoU localization.',
     'drop_path': 'Test whether stochastic depth during frozen-feature adaptation perturbs neck training.',
     'lr_head': 'Control adaptation of the already strong detection neck and head to reduce validation drift.',
+    'lr_backbone': 'Test smaller or larger encoder parameter updates after successful backbone adaptation; previous searches fixed this rate while tuning the head. Encoder structure, forward and initialization remain unchanged.',
+    'weight_decay': 'Test whether regularization of trainable encoder and box-projection matrices causes continued adaptation to drift from the strong initialization.',
     'reg_weight': 'Balance localization against classification and centerness to improve high-IoU boxes.',
     'reg_centerness_weighted': 'Emphasize regression of positive locations with higher target centerness to improve localization of high-confidence boxes.',
     'cosine_epochs': 'Align learning-rate decay with the fixed training-time budget.',
@@ -140,13 +143,13 @@ def command_for(exp, weights, gate, recipe, port=12466):
                '--data', '/home/lx/dataset/6cls_detection/data-2cls-remap.yaml',
                '--init_weights', str(weights), '--output_dir', str(OUTPUT), '--exp_name', exp,
                '--lesion_only', '--black_threshold', '3', '--selection_metric', 'lesion_AP50_95',
-               '--imgsz', '768', '--batch', '4', '--val_batch', '4', '--epochs', '100', '--lr_backbone', '2e-6',
-               '--layer_decay', '0.85', '--weight_decay', '0.05', '--warmup_epochs', '0.1', '--min_lr_ratio', '0.01',
+               '--imgsz', '768', '--batch', '4', '--val_batch', '4', '--epochs', '100',
+               '--layer_decay', '0.85', '--warmup_epochs', '0.1', '--min_lr_ratio', '0.01',
                '--clip_grad', '1.0', '--val_every', '1', '--val_max_images', '0', '--final_val_max_images', '0',
                '--conf_thres', '0.25', '--iou_thres', '0.7', '--save_period', '0', '--workers', '4',
                '--seed', str(recipe.get('seed', 0)),
                '--train_minutes', '120', '--save_min_score', str(gate), '--export_epoch_predictions']
-    for key, value in recipe.items():
+    for key, value in dict(BASE_RECIPE, **recipe).items():
         if key == 'seed':
             continue
         elif isinstance(value, bool):
@@ -217,6 +220,10 @@ def proposals(incumbent):
     # First test the named hypotheses; then refine one coordinate at a time.
     # Revisit the user's routing after a batch-size improvement; unchanged or
     # already tested combinations are skipped by the main loop.
+    if not incumbent['freeze_backbone']:
+        yield from [('lr_backbone', 5e-7), ('lr_backbone', 1e-6),
+                    ('lr_backbone', 4e-6), ('lr_backbone', 1e-7)]
+    yield from [('weight_decay', 0.0), ('weight_decay', 0.01), ('weight_decay', 0.1)]
     initial = [('freeze_backbone', True), ('seed', 0), ('seed', 2),
                ('seed', 1), ('center_radius', 1.0), ('center_radius', .75),
                ('center_radius', 1.25), ('accum', 2), ('out_layers', [13, 26, 39]),
