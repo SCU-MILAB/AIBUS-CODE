@@ -21,8 +21,9 @@ BASE_RECIPE = dict(fpn_topdown_scale=1.0, freeze_backbone=True, drop_path=0.1,
                    lr_head=2e-5, reg_weight=1.0, cosine_epochs=2.0, accum=4,
                    out_layers=None, reg_centerness_weighted=False, head_train_scope='all', seed=0, center_radius=1.5,
                    lr_backbone=2e-6, weight_decay=0.05, reg_l1_weight=0.0, sampler_seed=0,
-                   reg_iou_alpha=1.0)
+                   reg_iou_alpha=1.0, ctr_target='centerness')
 RATIONALES = {
+    'ctr_target': 'Supervise the existing centerness branch with detached predicted-box/GT IoU using its existing BCE; test quality ranking without changing model state or cls-times-centerness decoding. This is a training-only adaptation, not full GFL.',
     'reg_iou_alpha': 'Power overlap and enclosure penalty separately in Alpha-GIoU to emphasize accurate-box gradients; retain the incumbent loss weights, model, decoding and evaluation.',
     'sampler_seed': 'Change the shared DDP permutation seed to vary partial-epoch training coverage while retaining dataset membership, annotations, model/augmentation seed and evaluation.',
     'reg_l1_weight': 'Add relative box-edge Smooth L1 supervision alongside GIoU to test whether direct boundary gradients improve high-IoU localization. No evaluation, inference or model state changes.',
@@ -226,6 +227,7 @@ def proposals(incumbent):
     yield from [('cosine_epochs', 0.5), ('cosine_epochs', 0.25)]
     yield from [('sampler_seed', 17), ('sampler_seed', 41)]
     yield ('reg_iou_alpha', 3.0)
+    yield ('ctr_target', 'iou')
     yield from [('reg_l1_weight', 0.25), ('reg_l1_weight', 1.0), ('reg_l1_weight', 0.5),
                 ('head_train_scope', 'box_tower')]
     # First test the named hypotheses; then refine one coordinate at a time.

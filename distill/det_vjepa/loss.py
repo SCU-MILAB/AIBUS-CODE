@@ -84,8 +84,10 @@ class FCOSLoss(nn.Module):
     def __init__(self, fpn_strides=(8, 16, 32), center_radius=1.5,
                  focal_alpha=0.25, focal_gamma=2.0,
                  reg_weight=1.0, ctr_weight=1.0, reg_centerness_weighted=False,
-                 reg_l1_weight=0.0, reg_iou_alpha=1.0):
+                 reg_l1_weight=0.0, reg_iou_alpha=1.0, ctr_target='centerness'):
         super().__init__()
+        if ctr_target not in ('centerness', 'iou'):
+            raise ValueError('ctr_target must be centerness or iou')
         self.fpn_strides = tuple(fpn_strides)
         self.center_radius = center_radius
         self.focal_alpha = focal_alpha
@@ -94,6 +96,7 @@ class FCOSLoss(nn.Module):
         self.reg_l1_weight = reg_l1_weight
         self.reg_iou_alpha = reg_iou_alpha
         self.ctr_weight = ctr_weight
+        self.ctr_target = ctr_target
         self.reg_centerness_weighted = reg_centerness_weighted
         self.register_buffer('regress_ranges', regress_ranges_for(self.fpn_strides),
                              persistent=False)
@@ -206,8 +209,19 @@ class FCOSLoss(nn.Module):
                 edge_loss = (edge_loss.mean() if weights is None else
                              (edge_loss * weights).sum() / weights.sum().clamp(min=1e-6))
                 reg_loss = reg_loss + self.reg_l1_weight * edge_loss
+            quality_targets = ctr_t[positive]
+            if self.ctr_target == 'iou':
+                # Train the existing quality branch without changing decoding.
+                # Detached labels prevent BCE from moving boxes to fit scores.
+                with torch.no_grad():
+                    intersection_wh = (torch.minimum(pred_boxes[:, 2:], target_boxes[:, 2:])
+                                       - torch.maximum(pred_boxes[:, :2], target_boxes[:, :2])).clamp(min=0)
+                    intersection = intersection_wh.prod(dim=1)
+                    pred_area = (pred_boxes[:, 2:] - pred_boxes[:, :2]).clamp(min=0).prod(dim=1)
+                    target_area = (target_boxes[:, 2:] - target_boxes[:, :2]).clamp(min=0).prod(dim=1)
+                    quality_targets = (intersection / (pred_area + target_area - intersection).clamp(min=1e-6)).clamp(0, 1)
             ctr_loss = F.binary_cross_entropy_with_logits(
-                ctr[positive], ctr_t[positive], reduction='sum') / num_pos
+                ctr[positive], quality_targets, reduction='sum') / num_pos
         else:
             # Keep the graph connected so DDP does not flag the reg/ctr branches
             # as unused on images that contain no objects.

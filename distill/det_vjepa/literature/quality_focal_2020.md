@@ -16,3 +16,5 @@ Motivation from this project: original-to-incumbent AP90 increases with unchange
 
 Related primary source: Zhang, Haoyang; Wang, Ying; Dayoub, Feras; Sunderhauf, Niko. VarifocalNet: An IoU-Aware Dense Object Detector. CVPR 2021. https://openaccess.thecvf.com/content/CVPR2021/html/Zhang_VarifocalNet_An_IoU-Aware_Dense_Object_Detector_CVPR_2021_paper.html
 Its full model also introduces box-feature/refinement changes; benchmark gains do not isolate a training-only loss substitution for this project.
+
+Implemented 2026-10-07: opt-in ctr_target=iou uses only detached IoU BCE labels for the existing quality branch. Default centerness labels remain exact. The adaptation is queued after sampling/Alpha-GIoU tests; no full GFL scoring/architecture substitution. Checks are documented in findings.md and output/oct7_quality_target_implementation_checks.json.

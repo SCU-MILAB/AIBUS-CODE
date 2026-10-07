@@ -285,6 +285,8 @@ def parse_args():
                    help='training-only relative box-edge Smooth L1 weight in addition to GIoU')
     p.add_argument('--reg_iou_alpha', type=float, default=1.0,
                    help='training-only Alpha-GIoU power; 1 preserves ordinary GIoU')
+    p.add_argument('--ctr_target', choices=('centerness', 'iou'), default='centerness',
+                   help='training-only quality-branch BCE target; centerness preserves existing labels')
     p.add_argument('--reg_centerness_weighted', action=argparse.BooleanOptionalAction,
                    default=False, help='weight positive GIoU losses by target centerness')
     p.add_argument('--train_minutes', type=float, default=0,
@@ -401,6 +403,7 @@ def main():
                          reg_weight=args.reg_weight,
                          reg_l1_weight=args.reg_l1_weight,
                          reg_iou_alpha=args.reg_iou_alpha,
+                         ctr_target=args.ctr_target,
                          reg_centerness_weighted=args.reg_centerness_weighted).to(device)
 
     start_epoch = 0
