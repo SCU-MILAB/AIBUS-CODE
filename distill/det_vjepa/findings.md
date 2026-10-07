@@ -25,3 +25,12 @@ Run only one four-GPU job at a time. Fix data, split, annotations, backbone stru
 Sanity checks passed before launch: perfect boxes incur zero auxiliary loss; perturbed boxes incur greater loss and different boundary gradients; empty-target backward stays finite; regression tower training mask is correct. Read samples from train and validation without changing the dataset.
 
 The controller continuously records results, updates the global incumbent, skips tested recipes and starts the next single-variable experiment. Stop marker: output/autoresearch.stop. Status: output/autoresearch_live_status.md. Agent should reassess hypotheses after the first four new runs and adjust the plan if none improves AP, rather than relying only on diminishing coordinate perturbations.
+
+## Read-only localization audit after restart
+
+Source: output/oct7_restart_incumbent_localization.json, generated from existing full-validation prediction CSVs and unchanged GT. These are best-match descriptive IoUs, not one-to-one evaluation and not official recall/AP.
+
+- Incumbent IoU >= 0.90 coverage: 67.09% of all 4,157 lesions; smallest area quartile 54.19%, largest 74.06%. Relative mean absolute edge errors: x1 2.35%, y1 2.49%, x2 2.45%, y2 2.63% of GT width/height.
+- Relative to the original 768 checkpoint, incumbent official AP improves by 0.0014784, but descriptive mean best IoU drops 0.0023547 and the number below IoU 0.50 rises from 79 to 94. There are 2 newly covered GTs versus 17 newly uncovered GTs at IoU 0.50. Mean IoU improvement among mutually covered GTs is only 0.0002099. Thus the existing AP gain is not evidence of broadly better geometric localization; scoring/FP tradeoffs may contribute.
+- Original and incumbent aggregate IoU >= 0.90 coverage are identical, despite AP differences. Next-run diagnostics should compare the incumbent export against the candidate epoch export and inspect small-lesion coverage, misses, signed edge errors and confidence bins alongside official AP.
+- H170 is exploratory and combines a new loss intervention with exclusive GPU execution relative to past shared-GPU runs. Attribute any gain cautiously; serial versus shared-GPU comparisons have different training throughput within the fixed time budget. No claim of statistical significance is justified by these single-seed adaptive continuation experiments.
