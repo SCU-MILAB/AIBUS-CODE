@@ -152,3 +152,4 @@ f3fd68a	0.810754	23.5	discard	reg_weight 0.5 to 0.411611652352 at 768; 120 min
 cf68ba4	0.810348	23.5	discard	reg_weight 0.5 to 0.588388347648 at 768; 120 min
 ade32fd	0.810608	23.5	discard	cosine_epochs 2.0 to 1.8232233047 at 768; 120 min
 05b167b	0.809779	23.5	discard	cosine_epochs 2.0 to 2.1767766953 at 768; 120 min
+a26ecb3	0.810284	23.5	discard	drop_path 0.1 to 0.0911611652352 at 768; 120 min
