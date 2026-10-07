@@ -78,17 +78,19 @@ def setup_distributed(device_arg):
 
 def configure_trainability(model, freeze_backbone=False, head_train_scope='all'):
     """Apply training masks without changing detector outputs or checkpoint keys."""
-    if head_train_scope not in ('all', 'box_projection', 'box_tower'):
+    if head_train_scope not in ('all', 'box_projection', 'box_tower', 'box_quality_projection'):
         raise ValueError(f'unknown head train scope: {head_train_scope}')
     if freeze_backbone:
         model.backbone.requires_grad_(False)
-    if head_train_scope in ('box_projection', 'box_tower'):
+    if head_train_scope in ('box_projection', 'box_tower', 'box_quality_projection'):
         model.neck.requires_grad_(False)
         model.head.requires_grad_(False)
         model.head.bbox_pred.requires_grad_(True)
         model.head.scales.requires_grad_(True)
         if head_train_scope == 'box_tower':
             model.head.reg_tower.requires_grad_(True)
+        elif head_train_scope == 'box_quality_projection':
+            model.head.centerness.requires_grad_(True)
 
 
 def build_optimizer(model, args, num_blocks):
@@ -261,8 +263,8 @@ def parse_args():
                    default=True, help='activation checkpointing in ViT blocks')
     p.add_argument('--freeze_backbone', action=argparse.BooleanOptionalAction,
                    default=False, help='train only the neck and detection head')
-    p.add_argument('--head_train_scope', choices=('all', 'box_projection', 'box_tower'), default='all',
-                   help='box_projection trains bbox output and scales; box_tower also trains the regression tower; backbone trainability is independent')
+    p.add_argument('--head_train_scope', choices=('all', 'box_projection', 'box_tower', 'box_quality_projection'), default='all',
+                   help='box_projection trains bbox output and scales; box_tower adds regression tower; box_quality_projection adds centerness output; backbone trainability is independent')
     p.add_argument('--amp', action=argparse.BooleanOptionalAction, default=True)
 
     # Optimisation

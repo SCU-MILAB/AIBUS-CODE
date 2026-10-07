@@ -39,7 +39,7 @@ RATIONALES = {
     'cosine_epochs': 'Align learning-rate decay with the fixed training-time budget.',
     'freeze_backbone': 'Compare frozen versus trainable encoder weights from the current best checkpoint under the same time budget; freezing after successful encoder adaptation tests whether subsequent updates cause drift.',
     'accum': 'Test optimizer update frequency while retaining the same per-GPU microbatch and time budget.',
-    'head_train_scope': 'Restrict neck/head updates to bbox output convolution and level scales; with frozen backbone this preserves raw classification and centerness scores while adapting localization.',
+    'head_train_scope': 'Change only neck/head trainability: box_quality_projection adds existing centerness output to bbox/scales, while box_tower adds regression tower; encoder trainability is independent. No model/state/decoding changes.',
     'seed': 'Change only the random seed for continuation from the current best checkpoint to assess sensitivity to augmentation and model randomness; DDP permutation is controlled separately by sampler_seed; this is not an independent replication of the full winning lineage.',
 }
 
@@ -228,6 +228,7 @@ def proposals(incumbent):
     yield from [('sampler_seed', 17), ('sampler_seed', 41)]
     yield ('reg_iou_alpha', 3.0)
     yield ('ctr_target', 'iou')
+    yield ('head_train_scope', 'box_quality_projection')
     yield from [('reg_l1_weight', 0.25), ('reg_l1_weight', 1.0), ('reg_l1_weight', 0.5),
                 ('head_train_scope', 'box_tower')]
     # First test the named hypotheses; then refine one coordinate at a time.
