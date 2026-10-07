@@ -155,3 +155,4 @@ ade32fd	0.810608	23.5	discard	cosine_epochs 2.0 to 1.8232233047 at 768; 120 min
 a26ecb3	0.810284	23.5	discard	drop_path 0.1 to 0.0911611652352 at 768; 120 min
 8029085	0.810978	23.5	discard	drop_path 0.1 to 0.108838834765 at 768; 120 min
 9e20191	0.810128	23.5	discard	center_radius 1.25 to 1.21875 at 768; 120 min
+4f0d37b	0.811103	23.5	discard	center_radius 1.25 to 1.28125 at 768; 120 min
