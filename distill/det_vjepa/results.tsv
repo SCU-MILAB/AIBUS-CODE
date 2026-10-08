@@ -190,3 +190,4 @@ fdf4f73	0.809829	23.5	discard	lr_head 2e-05 to 2.12636365067e-05 at 768; 120 min
 078e6af	0.809667	23.5	discard	fpn_topdown_scale 1.0 to 0.977902913088 at 768; 120 min
 e864662	0.809700	23.5	discard	reg_weight 0.5 to 0.455805826176 at 768; 120 min
 2bfe0b0	0.810594	23.5	discard	reg_weight 0.5 to 0.544194173824 at 768; 120 min
+8ab14a6	0.810082	23.5	discard	cosine_epochs 2.0 to 1.91161165235 at 768; 120 min
