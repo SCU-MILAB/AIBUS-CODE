@@ -188,3 +188,4 @@ f998284	0.811076	23.5	discard	center_radius 1.25 to 1.27209708691 at 768; 120 mi
 bf81c32	0.809869	23.5	discard	lr_head 2e-05 to 1.88114577614e-05 at 768; 120 min
 fdf4f73	0.809829	23.5	discard	lr_head 2e-05 to 2.12636365067e-05 at 768; 120 min
 078e6af	0.809667	23.5	discard	fpn_topdown_scale 1.0 to 0.977902913088 at 768; 120 min
+e864662	0.809700	23.5	discard	reg_weight 0.5 to 0.455805826176 at 768; 120 min
