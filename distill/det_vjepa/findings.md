@@ -190,3 +190,10 @@ Together with H182 wd0, these exploratory continuations provide no observed prim
 Controller filled H183's slot at 22:58:27 UTC with H186 lr_head=1.88114577614e-5 (protocol bf81c32, PID 2201908). Verified sole changed recipe key is lr_head (from 2e-5), incumbent initialization and gate, 120-minute training and full validation. H185 remains in training; H184's result has been collected. Incumbent remains 0.8118909046053886.
 
 Controller filled H184's slot at 22:59:29 UTC with H187 lr_head=2.12636365067e-5 (protocol fdf4f73, PID 2205284). Verified sole changed recipe key is lr_head (from 2e-5), with incumbent initialization/gate, 120-minute training and full validation; the new process command line is live. H185/H186/H187 now occupy three parallel slots.
+
+
+## Small center-radius increase does not improve primary AP
+
+H185 center_radius=1.27209708691 completed 3,060 microbatches in 7,191.4 summary training seconds, reaching the budget with full 5,000-image validation. lesion_AP50_95=0.8110760942101478, delta -0.0008148103952407837 versus incumbent; discard, no best.pt, controller result commit 778f21d. Independent replay through unchanged metric.py exactly matches both-class AP50/AP50:95, GT and TP/FP/FN (output/oct7_h185_ap_threshold_audit.json). AP50/AP90/AP95 deltas are -0.000614941/+0.001142085/-0.000399500, with TP deltas -3/+9/0. The secondary AP90 gain does not meet the primary selection rule. Retain center_radius=1.25; a single concurrent, partial-epoch continuation does not establish statistical superiority or a universal assignment optimum.
+
+Controller filled the slot at 00:41:02 UTC on October 8 with H188 fpn_topdown_scale=0.977902913088 (protocol 078e6af, PID 2215608). Verified sole changed recipe key is fpn_topdown_scale (from 1.0), incumbent initialization/gate, 120-minute training and full validation; actual process command line is live. H186/H187 learning-rate alternatives continue uninterrupted. Incumbent remains 0.8118909046053886.
