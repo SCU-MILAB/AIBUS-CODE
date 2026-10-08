@@ -197,3 +197,14 @@ Controller filled H184's slot at 22:59:29 UTC with H187 lr_head=2.12636365067e-5
 H185 center_radius=1.27209708691 completed 3,060 microbatches in 7,191.4 summary training seconds, reaching the budget with full 5,000-image validation. lesion_AP50_95=0.8110760942101478, delta -0.0008148103952407837 versus incumbent; discard, no best.pt, controller result commit 778f21d. Independent replay through unchanged metric.py exactly matches both-class AP50/AP50:95, GT and TP/FP/FN (output/oct7_h185_ap_threshold_audit.json). AP50/AP90/AP95 deltas are -0.000614941/+0.001142085/-0.000399500, with TP deltas -3/+9/0. The secondary AP90 gain does not meet the primary selection rule. Retain center_radius=1.25; a single concurrent, partial-epoch continuation does not establish statistical superiority or a universal assignment optimum.
 
 Controller filled the slot at 00:41:02 UTC on October 8 with H188 fpn_topdown_scale=0.977902913088 (protocol 078e6af, PID 2215608). Verified sole changed recipe key is fpn_topdown_scale (from 1.0), incumbent initialization/gate, 120-minute training and full validation; actual process command line is live. H186/H187 learning-rate alternatives continue uninterrupted. Incumbent remains 0.8118909046053886.
+
+
+## Nearby head learning rates remain primary negatives
+
+H186 lr_head=1.88114577614e-5 completed 3,044 microbatches in 7,190.6 summary training seconds with full 5,000-image validation. lesion_AP50_95=0.8098686262965202, delta -0.002022278308868364 versus incumbent; discard, no best.pt, controller result commit 70acfbc. AP50/AP90/AP95 deltas are -0.000718415/-0.001519561/-0.005185902, with TP deltas -3/+2/-6.
+
+H187 lr_head=2.12636365067e-5 completed 3,020 microbatches in 7,190.7 summary training seconds with full 5,000-image validation. lesion_AP50_95=0.8098292410373688, delta -0.0020616635680198447; discard, no best.pt, controller result commit 9d0da26. AP50/AP90/AP95 deltas are -0.000945985/-0.001280844/-0.003698632, with TP deltas -4/+6/+2. The extra strict-threshold true positives do not establish improved AP.
+
+Both runs reached the training budget with finite losses. Independent replay through unchanged metric.py exactly matches both-class AP50/AP50:95, GT and TP/FP/FN (output/oct7_h186_ap_threshold_audit.json and output/oct7_h187_ap_threshold_audit.json). Retain lr_head=2e-5. Shared compute, partial epochs and single exploratory continuations prevent general optimality or statistical superiority claims.
+
+Controller filled H186's slot at 01:08:35 UTC on October 8 with H189 reg_weight=0.455805826176 (protocol e864662, PID 2225919). Verified sole changed recipe key is reg_weight (from .5), incumbent initialization/gate, 120-minute training and full validation; actual command line is live. H188 continues. Incumbent remains 0.8118909046053886.
