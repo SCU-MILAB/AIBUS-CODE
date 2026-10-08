@@ -208,3 +208,5 @@ H187 lr_head=2.12636365067e-5 completed 3,020 microbatches in 7,190.7 summary tr
 Both runs reached the training budget with finite losses. Independent replay through unchanged metric.py exactly matches both-class AP50/AP50:95, GT and TP/FP/FN (output/oct7_h186_ap_threshold_audit.json and output/oct7_h187_ap_threshold_audit.json). Retain lr_head=2e-5. Shared compute, partial epochs and single exploratory continuations prevent general optimality or statistical superiority claims.
 
 Controller filled H186's slot at 01:08:35 UTC on October 8 with H189 reg_weight=0.455805826176 (protocol e864662, PID 2225919). Verified sole changed recipe key is reg_weight (from .5), incumbent initialization/gate, 120-minute training and full validation; actual command line is live. H188 continues. Incumbent remains 0.8118909046053886.
+
+Controller filled H187's slot at 01:09:37 UTC on October 8 with H190 reg_weight=0.544194173824 (protocol 2bfe0b0, PID 2229281). Verified sole changed recipe key is reg_weight (from .5), incumbent initialization/gate, 120-minute training and full validation; actual command line is live. H188/H189/H190 occupy all three slots; controller is live.
