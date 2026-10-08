@@ -192,3 +192,4 @@ e864662	0.809700	23.5	discard	reg_weight 0.5 to 0.455805826176 at 768; 120 min
 2bfe0b0	0.810594	23.5	discard	reg_weight 0.5 to 0.544194173824 at 768; 120 min
 8ab14a6	0.810082	23.5	discard	cosine_epochs 2.0 to 1.91161165235 at 768; 120 min
 537ea48	0.809948	23.5	discard	cosine_epochs 2.0 to 2.08838834765 at 768; 120 min
+0950a79	0.810230	23.5	discard	drop_path 0.1 to 0.0955805826176 at 768; 120 min
