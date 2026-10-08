@@ -184,3 +184,4 @@ f900596	0.811220	23.5	discard	lr_backbone 2e-06 to 1e-07 at 768; 120 min
 3065689	0.809666	23.5	discard	weight_decay 0.05 to 0.0 at 768; 120 min
 9167d80	0.809839	23.5	discard	weight_decay 0.05 to 0.01 at 768; 120 min
 fa00b47	0.810705	23.5	discard	weight_decay 0.05 to 0.1 at 768; 120 min
+f998284	0.811076	23.5	discard	center_radius 1.25 to 1.27209708691 at 768; 120 min
