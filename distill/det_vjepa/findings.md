@@ -210,3 +210,8 @@ Both runs reached the training budget with finite losses. Independent replay thr
 Controller filled H186's slot at 01:08:35 UTC on October 8 with H189 reg_weight=0.455805826176 (protocol e864662, PID 2225919). Verified sole changed recipe key is reg_weight (from .5), incumbent initialization/gate, 120-minute training and full validation; actual command line is live. H188 continues. Incumbent remains 0.8118909046053886.
 
 Controller filled H187's slot at 01:09:37 UTC on October 8 with H190 reg_weight=0.544194173824 (protocol 2bfe0b0, PID 2229281). Verified sole changed recipe key is reg_weight (from .5), incumbent initialization/gate, 120-minute training and full validation; actual command line is live. H188/H189/H190 occupy all three slots; controller is live.
+
+
+## Experiment loop stopped at user request
+
+At 2026-10-08T06:20:26.598376+00:00, the user requested stopping currently running experiments. Stopped controller PID 2140326 and all 63 associated training/worker processes for H194 drop_path=0.104419417382, H195 center_radius=1.234375 and H196 center_radius=1.265625. No force kill was required. Verified no selected non-zombie process remains; GPU memory usage is 14 MiB per device. The dispatch stop marker output/autoresearch.stop is present. Interrupted runs are not negative experimental evidence. Stop record: output/oct8_user_stop.json. Existing artifacts and incumbent H72 best.pt are preserved; known_best() still reports lesion_AP50_95=0.8118909046053886.
