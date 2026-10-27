@@ -1,9 +1,9 @@
 <div align="center">
 <h1>BUVFM — Breast Ultrasound Video Foundation Model</h1>
 <a href='https://huggingface.co/collections/SCU-MILAB/buvfm'><img src='https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Collection-blue'></a>
-<a href='https://scu-milab.github.io/BUVFM/'><img src='https://img.shields.io/badge/Homepage-green' alt='Homepage'></a>
+<a href='https://scu-milab.github.io/AIBUS/'><img src='https://img.shields.io/badge/Homepage-green' alt='Homepage'></a>
 <a href='http://buvfm.machineilab.org/'><img src='https://img.shields.io/badge/Demopage-blue' alt='Demopage'></a>
-<a href='https://github.com/SCU-MILAB/BUVFM-CODE'><img src='https://img.shields.io/badge/Github-red' alt='Github'></a>
+<a href='https://github.com/SCU-MILAB/AIBUS-CODE'><img src='https://img.shields.io/badge/Github-red' alt='Github'></a>
 </div>
 
 BUVFM is the first breast ultrasound video foundation model, pretrained on 423K frames and 84K video sequences via self-supervised learning and fine-tuned for BI-RADS risk stratification. It powers AIBS, a cloud-edge system that enables non-physician ultrasound acquisition with real-time quality control, and achieves 95.42% macro sensitivity and 95.60% macro specificity across internal and 11 external cohorts.
@@ -124,7 +124,7 @@ Minimal Reproduction Steps to reproduce the train/inference pipeline in our pape
 # ============================================================
 # Step 1. Download source code
 # ============================================================
-git clone https://github.com/2512988161/BUVFM.git && cd BUVFM/
+git clone https://github.com/SCU-MILAB/AIBUS-CODE && cd AIBUS-CODE/
 
 # ============================================================
 # Step 2. Download demo dataset & model weight from HuggingFace
