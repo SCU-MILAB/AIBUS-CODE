@@ -1,0 +1,108 @@
+{
+  "repository": "https://github.com/roboflow/rf-detr",
+  "tag": "1.9.4",
+  "commit": "9b009fa928d6218320439803d1da01869a85c072",
+  "adaptation": "Import namespace replacement only in copied algorithms; custom backbone builder stub disables DINO. Original sources remain in upstream.",
+  "files": [
+    {
+      "path": "models/_defaults.py",
+      "upstream_sha256": "bd27cb67585e3812dc9007b8c36183c2aab8244e4e221a89db4173ab3cfca9ef",
+      "local_sha256": "bd27cb67585e3812dc9007b8c36183c2aab8244e4e221a89db4173ab3cfca9ef"
+    },
+    {
+      "path": "models/_types.py",
+      "upstream_sha256": "88aa6fd82b9037bd88777a33464982b8e74facc68370ec3d347c421ba233e318",
+      "local_sha256": "88aa6fd82b9037bd88777a33464982b8e74facc68370ec3d347c421ba233e318"
+    },
+    {
+      "path": "models/math.py",
+      "upstream_sha256": "3dda06e8d27ef88f0b05b616e16ac20f50ddf05ac38a87342e893d23712fe241",
+      "local_sha256": "3dda06e8d27ef88f0b05b616e16ac20f50ddf05ac38a87342e893d23712fe241"
+    },
+    {
+      "path": "models/transformer.py",
+      "upstream_sha256": "054d987ca3e1e59979d3fa1cb7e2dba445a4e60a26034004130762b33cccdfc6",
+      "local_sha256": "cc56bbb26c2fb75d0838110eec8818b9801b911994aae84938df5cf2baadd0ba"
+    },
+    {
+      "path": "models/criterion.py",
+      "upstream_sha256": "8c346e3ab38d34e4beb58bf4ab1a911fe90f060cac71084d412ca0b1793608db",
+      "local_sha256": "7f750ad2e1926538848aee21d89dee66092ead56f27614ffa3e3f525b988b93b"
+    },
+    {
+      "path": "models/matcher.py",
+      "upstream_sha256": "14056e038ae6efaca4b27d639d6a554c4c2db6389f683e877e068f4579b2d3de",
+      "local_sha256": "4dc1ee87b1d4cfa9b4bb7d45f4156485b3a179cfb1d116daa5d533c642a180a1"
+    },
+    {
+      "path": "models/position_encoding.py",
+      "upstream_sha256": "acad064d8f460eecd69e4b50494c0c1ae38431206be412a43e2054a3a9eb4497",
+      "local_sha256": "eda1670ff012bcfd78e34c85160c6bd9883749ea454dcb1f4789125dede9bfae"
+    },
+    {
+      "path": "models/postprocess.py",
+      "upstream_sha256": "0081349e2ba30f05a7caf9831f5efddbfcb6de1e6ac462432da5531e53a84be0",
+      "local_sha256": "b36f2615e7d360e21013ffb8635ede3536c5a9f4705e16aadde9795c7d941707"
+    },
+    {
+      "path": "models/lwdetr.py",
+      "upstream_sha256": "b8685a02b4cb1a8c5a31c1d527951257e7893d8e441908f68ac8c56d5f307880",
+      "local_sha256": "5498aecf9ea8ff70bc57432269e86951c212f5ca119427f7fb7f6b97088911ec"
+    },
+    {
+      "path": "models/backbone/projector.py",
+      "upstream_sha256": "03aa7dde80782482b56d7beb8a6d4e302ffbce41c4571f5f4b89da61a0adbaac",
+      "local_sha256": "03aa7dde80782482b56d7beb8a6d4e302ffbce41c4571f5f4b89da61a0adbaac"
+    },
+    {
+      "path": "models/heads/keypoints.py",
+      "upstream_sha256": "8e4c31e680e867af7b47b53d2e6db56eea9b47dbc24ef021303cddf5bf5b565d",
+      "local_sha256": "75104118d0e09eee36b3e2a1e0a113128c8c654ea70f6b0e71624f6d51f94760"
+    },
+    {
+      "path": "models/heads/segmentation.py",
+      "upstream_sha256": "7a6ca8afc3079fcb5ffba089bf47bad8b7f401e2680a590b34043c84da37c06f",
+      "local_sha256": "a1615b4b4eaaf8d91322540c8c69a0e391a047580e7b582967c92d10defae1e0"
+    },
+    {
+      "path": "models/ops/modules/ms_deform_attn.py",
+      "upstream_sha256": "cc4987466b19e357735deb83a9aa74ac83bbe4b1132317341cb08b630db95aa0",
+      "local_sha256": "69bf5b83ecf2a5aa831c918118a01e66339a6a5f34f50fe29dfd3cab9413d64d"
+    },
+    {
+      "path": "models/ops/modules/__init__.py",
+      "upstream_sha256": "8c77a4beb80ac08e19a779bd31f30859d14974cdf619b33e27ea6cdd0d5e30e4",
+      "local_sha256": "6523d72945ec81f610460dc75bcfa55cf0c6fb29268bc0ddc4d4ff517ce190d0"
+    },
+    {
+      "path": "models/ops/functions/ms_deform_attn_func.py",
+      "upstream_sha256": "16f1d5931534ffcdd5faad1afa14d8b09b7f6bfc18ec36236fb6a8e02e8e933a",
+      "local_sha256": "a74339a1b7c1256dd631b1dc09d44385635f00efd2e5b1ea32afc3994774a330"
+    },
+    {
+      "path": "models/ops/functions/__init__.py",
+      "upstream_sha256": "73ca6c8237fcdad5b07a9a168c9dd19eed31457cce0bf15eca1ad3c17ec1933e",
+      "local_sha256": "ebf75960d38a0813b2f5e1defc751972705ce1002d0f2bc1864d24941606ae0d"
+    },
+    {
+      "path": "utilities/logger.py",
+      "upstream_sha256": "7a2148133e23df6fb03242dfb757adecdab2912ad61f1da0ab22939d7e120cae",
+      "local_sha256": "7a2148133e23df6fb03242dfb757adecdab2912ad61f1da0ab22939d7e120cae"
+    },
+    {
+      "path": "utilities/tensors.py",
+      "upstream_sha256": "d6098cc923e366ffc3976012ee84fe885fab4eae2035e971a8e2d2867876bd38",
+      "local_sha256": "d6098cc923e366ffc3976012ee84fe885fab4eae2035e971a8e2d2867876bd38"
+    },
+    {
+      "path": "utilities/box_ops.py",
+      "upstream_sha256": "98b9461da2e33c3de574e15a8f96a8d4cdc80cf8e695e3f687a6328b81780a57",
+      "local_sha256": "98b9461da2e33c3de574e15a8f96a8d4cdc80cf8e695e3f687a6328b81780a57"
+    },
+    {
+      "path": "utilities/distributed.py",
+      "upstream_sha256": "aed510083fb3259f4f9e9057bddebf8f9f7aa385144b08e59141ed8299b7952c",
+      "local_sha256": "aed510083fb3259f4f9e9057bddebf8f9f7aa385144b08e59141ed8299b7952c"
+    }
+  ]
+}
