@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+.cache/app1_results/
 *.py[cod]
 *$py.class
 *.egg-info/
@@ -71,3 +72,8 @@ graphify-out/
 *.bin
 train_new.py
 optm.py
+
+wangchenzhong/
+distill/bk/
+distill/det/bk/
+distill/det_vjepa/

@@ -57,8 +57,9 @@ def main():
         out_layers = cfg.get('out_layers')
         out_layers = None if out_layers is None else tuple(out_layers)
         fpn_topdown_scale = cfg.get('fpn_topdown_scale', 1.0)
+        box_residual = cfg.get('box_residual', 'none')
         signature = (model_classes, imgsz, tuple(cfg['fpn_strides']),
-                     cfg['fpn_dim'], cfg['head_convs'], out_layers, fpn_topdown_scale)
+                     cfg['fpn_dim'], cfg['head_convs'], out_layers, fpn_topdown_scale, box_residual)
         if model is None or signature != previous_signature:
             del model
             torch.cuda.empty_cache()
@@ -67,7 +68,7 @@ def main():
                 fpn_strides=tuple(cfg['fpn_strides']), fpn_dim=cfg['fpn_dim'],
                 head_convs=cfg['head_convs'], drop_path=cfg['drop_path'],
                 grad_checkpoint=False, out_layers=out_layers,
-                fpn_topdown_scale=fpn_topdown_scale).to(device)
+                fpn_topdown_scale=fpn_topdown_scale, box_residual=box_residual).to(device)
             previous_signature = signature
         load_detector_weights(model, ckpt['model'], lesion_only=lesion_only)
         epoch = ckpt['epoch']
@@ -85,6 +86,7 @@ def main():
                       checkpoint_imgsz=cfg['imgsz'],
                       out_layers=out_layers,
                       fpn_topdown_scale=fpn_topdown_scale,
+                      box_residual=box_residual,
                       lesion_only=lesion_only, model_num_classes=model_classes,
                       black_threshold=cfg.get('black_threshold', 3),
                       conf_thres=cfg['conf_thres'], iou_thres=cfg['iou_thres'],

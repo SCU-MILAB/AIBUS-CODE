@@ -37,7 +37,7 @@ _VJEPA_ROOT = os.path.abspath(os.path.join(_HERE, '..', '..'))
 if _VJEPA_ROOT not in sys.path:
     sys.path.insert(0, _VJEPA_ROOT)
 
-from distill.det_vjepa.dataset import build_datasets, collate_fn
+from distill.det_vjepa.dataset import build_datasets, collate_fn, validate_augmentation
 from distill.det_vjepa.loss import FCOSLoss
 from distill.det_vjepa.evaluation import evaluate_detector, save_predictions
 from distill.det_vjepa.model import VJepaDetector, load_detector_weights
@@ -91,6 +91,8 @@ def configure_trainability(model, freeze_backbone=False, head_train_scope='all')
             model.head.reg_tower.requires_grad_(True)
         elif head_train_scope == 'box_quality_projection':
             model.head.centerness.requires_grad_(True)
+        if getattr(model.head, 'box_residual', None) is not None:
+            model.head.box_residual.requires_grad_(True)
 
 
 def build_optimizer(model, args, num_blocks):
@@ -246,6 +248,19 @@ def parse_args():
 
     # Model
     p.add_argument('--imgsz', type=int, default=640)
+    p.add_argument('--flip_prob', type=float, default=0.5)
+    for name, description in (
+        ('degrees', 'maximum absolute rotation in degrees'),
+        ('translate', 'maximum translation as a fraction of image size'),
+        ('scale', 'zoom sampled uniformly from 1-scale to 1+scale'),
+        ('brightness', 'maximum additive brightness change in [0,1] pixels'),
+        ('contrast', 'contrast factor range 1-contrast to 1+contrast'),
+        ('gamma', 'gamma exponent range 1-gamma to 1+gamma'),
+        ('noise_std', 'maximum Gaussian noise standard deviation in [0,1] pixels'),
+        ('blur_prob', 'probability of mild 3x3 Gaussian blur'),
+    ):
+        p.add_argument(f'--aug_{name}', type=float, default=0.0,
+                       help=f'training only: {description}; 0 disables')
     p.add_argument('--fpn_strides', type=int, nargs='+', default=[8, 16, 32])
     p.add_argument('--out_layers', type=int, nargs='+', default=None,
                    help='zero-based ViT block outputs, one per FPN level; '
@@ -266,6 +281,10 @@ def parse_args():
     p.add_argument('--head_train_scope', choices=('all', 'box_projection', 'box_tower', 'box_quality_projection'), default='all',
                    help='box_projection trains bbox output and scales; box_tower adds regression tower; box_quality_projection adds centerness output; backbone trainability is independent')
     p.add_argument('--amp', action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument('--backbone_gradient', choices=('all', 'no_ctr', 'reg_only'), default='all',
+                   help='training-only gradient routing through the frozen classification/centerness branches')
+    p.add_argument('--box_residual', choices=('none', 'token', 'image'), default='none',
+                   help='zero-initialized finest-level regression residual')
 
     # Optimisation
     p.add_argument('--epochs', type=int, default=20)
@@ -276,7 +295,7 @@ def parse_args():
     p.add_argument('--lr_backbone', type=float, default=1e-5)
     p.add_argument('--lr_head', type=float, default=1e-4)
     p.add_argument('--weight_decay', type=float, default=0.05)
-    p.add_argument('--layer_decay', type=float, default=0.75)
+    p.add_argument('--layer_decay', type=float, default=0.9)
     p.add_argument('--warmup_epochs', type=float, default=0.5)
     p.add_argument('--min_lr_ratio', type=float, default=0.01)
     p.add_argument('--clip_grad', type=float, default=1.0)
@@ -293,6 +312,8 @@ def parse_args():
                    default=False, help='weight positive GIoU losses by target centerness')
     p.add_argument('--train_minutes', type=float, default=0,
                    help='training time budget in minutes; 0 = complete all epochs')
+    p.add_argument('--reg_normalization', choices=('positive', 'gt'), default='positive',
+                   help='average regression by positive location or by matched GT instance')
 
     # Eval / IO
     p.add_argument('--val_batch', type=int, default=8)
@@ -321,6 +342,8 @@ def parse_args():
     p.add_argument('--seed', type=int, default=0)
     p.add_argument('--sampler_seed', type=int, default=0,
                    help='shared DDP training permutation seed; 0 preserves the existing order')
+    p.add_argument('--reset_training_rng', action='store_true',
+                   help='reset training RNG after initialization to pair runs with different new modules')
     return p.parse_args()
 
 
@@ -331,6 +354,8 @@ def main():
         raise ValueError('--selection_metric lesion_AP50_95 requires --lesion_only')
     if args.resume and args.init_weights:
         raise ValueError('--resume and --init_weights are mutually exclusive')
+    if args.backbone_gradient != 'all' and args.head_train_scope != 'box_projection':
+        raise ValueError('gradient-routing experiments require --head_train_scope box_projection')
     if not 0 <= args.black_threshold <= 255:
         raise ValueError('--black_threshold must be in [0, 255]')
     if not math.isfinite(args.rank_zero_timeout) or args.rank_zero_timeout <= 0:
@@ -349,6 +374,12 @@ def main():
         raise ValueError('--cosine_epochs must exceed --warmup_epochs')
     if args.export_epoch_predictions and args.val_max_images:
         raise ValueError('--export_epoch_predictions requires full validation (--val_max_images 0)')
+    augmentation = {name: getattr(args, f'aug_{name}') for name in
+                    ('degrees', 'translate', 'scale', 'brightness', 'contrast',
+                     'gamma', 'noise_std', 'blur_prob')}
+    validate_augmentation(augmentation)
+    if not math.isfinite(args.flip_prob) or not 0 <= args.flip_prob <= 1:
+        raise ValueError('--flip_prob must be in [0, 1]')
     rank, world_size, device, is_distributed = setup_distributed(args.device)
     # All ranks create this group in the same order, before rank-only work.
     rank_zero_group = create_rank_zero_group(args.rank_zero_timeout) if is_distributed else None
@@ -361,7 +392,8 @@ def main():
 
     train_set, val_set, class_names = build_datasets(
         args.data, imgsz=args.imgsz, lesion_only=args.lesion_only,
-        black_threshold=args.black_threshold)
+        black_threshold=args.black_threshold, flip_prob=args.flip_prob,
+        augmentation=augmentation)
     if log:
         print(f'train images {len(train_set)}, val images {len(val_set)}, '
               f'classes {class_names}', flush=True)
@@ -391,6 +423,7 @@ def main():
         drop_path=args.drop_path, grad_checkpoint=args.grad_checkpoint,
         out_layers=args.out_layers,
         fpn_topdown_scale=args.fpn_topdown_scale,
+        backbone_gradient=args.backbone_gradient, box_residual=args.box_residual,
     ).to(device)
 
     configure_trainability(base_model, args.freeze_backbone, args.head_train_scope)
@@ -406,12 +439,14 @@ def main():
                          reg_l1_weight=args.reg_l1_weight,
                          reg_iou_alpha=args.reg_iou_alpha,
                          ctr_target=args.ctr_target,
+                         reg_normalization=args.reg_normalization,
                          reg_centerness_weighted=args.reg_centerness_weighted).to(device)
 
     start_epoch = 0
     if args.init_weights:
-        ckpt = torch.load(args.init_weights, map_location='cpu', weights_only=False)
-        load_detector_weights(base_model, ckpt['model'], lesion_only=args.lesion_only)
+        ckpt = torch.load(args.init_weights, map_location='cpu', weights_only=False, mmap=True)
+        load_detector_weights(base_model, ckpt['model'], lesion_only=args.lesion_only,
+                              allow_new_residual=True)
         del ckpt
         if log:
             print(f'initialized model weights from {args.init_weights}; '
@@ -428,6 +463,10 @@ def main():
             raise ValueError('resume requires the same --fpn_topdown_scale; use --init_weights to change fusion')
         if ckpt['args'].get('head_train_scope', 'all') != args.head_train_scope:
             raise ValueError('resume requires the same --head_train_scope; use --init_weights to change training masks')
+        for name, default in [('backbone_gradient', 'all'), ('box_residual', 'none'),
+                              ('reg_normalization', 'positive')]:
+            if ckpt['args'].get(name, default) != getattr(args, name):
+                raise ValueError(f'resume requires the same --{name}')
         base_model.load_state_dict(ckpt['model'])
         optimizer.load_state_dict(ckpt['optimizer'])
         start_epoch = ckpt['epoch'] + 1
@@ -464,6 +503,10 @@ def main():
 
     best_map = -1.0
     training_seconds = 0.0
+    if args.reset_training_rng:
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
     torch.cuda.reset_peak_memory_stats(device)
     for epoch in range(start_epoch, args.epochs):
         if train_sampler is not None:
@@ -548,6 +591,7 @@ def main():
                                    data=args.data, imgsz=args.imgsz,
                                    out_layers=args.out_layers,
                                    fpn_topdown_scale=args.fpn_topdown_scale,
+                                   box_residual=args.box_residual,
                                    lesion_only=args.lesion_only,
                                    model_num_classes=base_model.head.num_classes,
                                    black_threshold=args.black_threshold,

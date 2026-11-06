@@ -122,12 +122,78 @@ def foreground_box(img, black_threshold=3):
                      (regions[:, 1] + regions[:, 3]).max()], np.float32)
 
 
+def validate_augmentation(options):
+    """Validate optional training-only augmentation magnitudes."""
+    limits = {'degrees': 15, 'translate': 0.25, 'scale': 0.5,
+              'brightness': 0.5, 'contrast': 0.5, 'gamma': 0.5,
+              'noise_std': 0.1, 'blur_prob': 1}
+    unknown = set(options) - set(limits)
+    if unknown:
+        raise ValueError(f'unknown augmentation options: {sorted(unknown)}')
+    for key, value in options.items():
+        if not np.isfinite(value) or not 0 <= value <= limits[key]:
+            raise ValueError(f'augmentation {key} must be in [0, {limits[key]}]')
+
+
+def augment_detection(img, boxes, labels, options):
+    """Mild affine and intensity augmentation; keep boxes aligned with pixels.
+
+    Reject geometric transforms that substantially cut any positive box, rather
+    than silently turning a partially visible lesion into a negative sample.
+    All-zero options preserve the historical training pipeline and RNG stream.
+    """
+    h, w = img.shape[:2]
+    degrees, translate, scale = (options.get(k, 0) for k in ('degrees', 'translate', 'scale'))
+    if degrees or translate or scale:
+        angle = np.random.uniform(-degrees, degrees)
+        zoom = np.random.uniform(1 - scale, 1 + scale)
+        matrix = cv2.getRotationMatrix2D((w / 2, h / 2), angle, zoom)
+        matrix[:, 2] += np.random.uniform(-translate, translate, 2) * [w, h]
+        transformed = boxes.copy()
+        accept = True
+        if len(boxes):
+            corners = boxes[:, [0, 1, 2, 1, 2, 3, 0, 3]].reshape(-1, 4, 2)
+            points = corners @ matrix[:, :2].T + matrix[:, 2]
+            raw = np.concatenate((points.min(axis=1), points.max(axis=1)), axis=1)
+            transformed = raw.copy()
+            transformed[:, [0, 2]] = transformed[:, [0, 2]].clip(0, w)
+            transformed[:, [1, 3]] = transformed[:, [1, 3]].clip(0, h)
+            sides = transformed[:, 2:] - transformed[:, :2]
+            raw_area = np.prod(raw[:, 2:] - raw[:, :2], axis=1)
+            retained = np.prod(sides, axis=1) / np.maximum(raw_area, 1e-6)
+            accept = bool(np.all((sides > 1).all(axis=1) & (retained >= 0.9)))
+        if accept:
+            img = cv2.warpAffine(img, matrix, (w, h), flags=cv2.INTER_LINEAR,
+                                 borderMode=cv2.BORDER_CONSTANT, borderValue=(114, 114, 114))
+            boxes = transformed.astype(np.float32)
+
+    brightness, contrast, gamma, noise = (options.get(k, 0) for k in
+                                         ('brightness', 'contrast', 'gamma', 'noise_std'))
+    if brightness or contrast or gamma or noise:
+        pixels = img.astype(np.float32) / 255.0
+        if contrast:
+            pixels = (pixels - 0.5) * np.random.uniform(1 - contrast, 1 + contrast) + 0.5
+        if brightness:
+            pixels += np.random.uniform(-brightness, brightness)
+        pixels = np.clip(pixels, 0, 1)
+        if gamma:
+            pixels = pixels ** np.random.uniform(1 - gamma, 1 + gamma)
+        if noise:
+            # Shared noise across channels preserves grayscale ultrasound appearance.
+            pixels += np.random.normal(0, np.random.uniform(0, noise), (h, w, 1))
+        img = (np.clip(pixels, 0, 1) * 255).round().astype(np.uint8)
+    blur_prob = options.get('blur_prob', 0)
+    if blur_prob and np.random.rand() < blur_prob:
+        img = cv2.GaussianBlur(img, (3, 3), sigmaX=np.random.uniform(0.3, 0.8))
+    return img, boxes, labels
+
+
 class YoloDetectionDataset(Dataset):
     """Letterboxed YOLO-format detection dataset."""
 
     def __init__(self, root, image_paths, imgsz=640, augment=False,
                  flip_prob=0.5, skip_empty=False, lesion_only=False,
-                 black_threshold=3):
+                 black_threshold=3, augmentation=None):
         self.root = root
         self.image_paths = image_paths
         self.imgsz = imgsz
@@ -136,6 +202,8 @@ class YoloDetectionDataset(Dataset):
         self.skip_empty = skip_empty
         self.lesion_only = lesion_only
         self.black_threshold = black_threshold
+        self.augmentation = dict(augmentation or {})
+        validate_augmentation(self.augmentation)
 
     def __len__(self):
         return len(self.image_paths)
@@ -173,6 +241,9 @@ class YoloDetectionDataset(Dataset):
             keep = ((boxes[:, 2] - boxes[:, 0]) > min_side) & ((boxes[:, 3] - boxes[:, 1]) > min_side)
             boxes, labels = boxes[keep], labels[keep]
 
+        if self.augment:
+            img, boxes, labels = augment_detection(img, boxes, labels, self.augmentation)
+
         if self.augment and (boxes.shape[0] or self.lesion_only) and np.random.rand() < self.flip_prob:
             img = img[:, ::-1]
             boxes = np.stack([
@@ -207,7 +278,7 @@ def collate_fn(batch):
 
 
 def build_datasets(data_yaml, imgsz=640, flip_prob=0.5, lesion_only=False,
-                   black_threshold=3):
+                   black_threshold=3, augmentation=None):
     """Return (train_dataset, val_dataset, class_names)."""
     root, cfg, names = load_data_yaml(data_yaml)
     if lesion_only and len(names) != 2:
@@ -216,7 +287,8 @@ def build_datasets(data_yaml, imgsz=640, flip_prob=0.5, lesion_only=False,
     val_paths = list_images(root, cfg['val'])
     train_set = YoloDetectionDataset(root, train_paths, imgsz, augment=True,
                                      flip_prob=flip_prob, lesion_only=lesion_only,
-                                     black_threshold=black_threshold)
+                                     black_threshold=black_threshold,
+                                     augmentation=augmentation)
     val_set = YoloDetectionDataset(root, val_paths, imgsz, augment=False,
                                    lesion_only=lesion_only, black_threshold=black_threshold)
     return train_set, val_set, names

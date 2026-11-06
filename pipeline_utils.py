@@ -255,7 +255,8 @@ def frames_to_video_file(frames, fps=8, prefix="gradcam"):
     """Write RGB numpy frames to a temp mp4 file (H.264). Returns file path."""
     tmp_dir = tempfile.mkdtemp(prefix="gradio_")
     path = os.path.join(tmp_dir, f"{prefix}.mp4")
-    iio.imwrite(path, frames, fps=fps, codec="libx264")
+    iio.imwrite(path, frames, fps=fps, codec="libx264",
+                output_params=["-movflags", "+faststart", "-g", str(max(1, round(fps))), "-threads", "2"])
     return path
 
 
@@ -323,11 +324,11 @@ def draw_yolo_boxes(frame, boxes):
     for box in boxes:
         x1, y1, x2, y2 = map(int, box["xyxy"])
         conf = float(box["conf"])
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 1)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 3)
         label = f"{conf:.2f}"
         font = cv2.FONT_HERSHEY_SIMPLEX
-        scale = 0.42
-        text_thickness = 1
+        scale = 0.8
+        text_thickness = 2
         (_, th), baseline = cv2.getTextSize(label, font, scale, text_thickness)
         text_y = y1 - 2
         if text_y - th < 0:

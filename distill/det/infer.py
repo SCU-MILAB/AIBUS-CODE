@@ -149,7 +149,7 @@ def compute_ap(rec, prec):
     return float(np.sum((rec[idx + 1] - rec[idx]) * prec[idx + 1]))
 
 
-def compute_metrics(predictions, gt, num_classes, iou_thresholds):
+def compute_metrics(predictions, gt, num_classes, iou_thresholds, background_perfect_match=False):
     """Compute per-class AP, mAP, precision, recall, F1."""
     aps = {t: {} for t in iou_thresholds}
     per_class = {}  # cls_id -> {precision, recall, f1}
@@ -183,7 +183,7 @@ def compute_metrics(predictions, gt, num_classes, iou_thresholds):
                     for j, gt_box in enumerate(gt_list):
                         if matched[img_path][j]:
                             continue
-                        iou_val = compute_iou(det_box, gt_box)
+                        iou_val = 1.0 if background_perfect_match and cls_id == 1 else compute_iou(det_box, gt_box)
                         if iou_val > best_iou:
                             best_iou = iou_val
                             best_j = j
@@ -218,7 +218,7 @@ def compute_metrics(predictions, gt, num_classes, iou_thresholds):
                     for j, gt_box in enumerate(gt_list):
                         if matched[img_path][j]:
                             continue
-                        iou_val = compute_iou(det_box, gt_box)
+                        iou_val = 1.0 if background_perfect_match and cls_id == 1 else compute_iou(det_box, gt_box)
                         if iou_val > best_iou:
                             best_iou = iou_val; best_j = j
                     if best_j >= 0 and best_iou >= 0.5:
@@ -251,7 +251,7 @@ def compute_metrics(predictions, gt, num_classes, iou_thresholds):
     tp_sum = 0; fp_sum = 0
     for cls_id in range(num_classes):
         pc = per_class[cls_id]
-        if pc['n_gt'] > 0 and pc['n_det'] > 0:
+        if pc['n_det'] > 0:
             tp_sum += int(round(pc['precision'] * pc['n_det']))
             fp_sum += pc['n_det'] - int(round(pc['precision'] * pc['n_det']))
     metrics['precision'] = tp_sum / (tp_sum + fp_sum) if (tp_sum + fp_sum) > 0 else 0.0

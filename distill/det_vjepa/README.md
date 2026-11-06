@@ -61,6 +61,39 @@ stride 8/32 仍由各分支的上/下采样生成。`--out_layers` 不传时，�
 
 环境用仓库现有的即可（torch / torchvision / ultralytics / opencv / pyyaml），无需额外安装。
 
+从 H72 control 的 `best.pt` 初始化，以 `layer_decay=0.9` 继续训练，
+SimpleFPN 的基础尺度分支仅保留 `1×1 Conv`：
+
+```bash
+cd /home/lx/baselines/vjepa
+bash distill/det_vjepa/scripts/train_simplefpn_ld09.sh
+```
+
+该脚本使用四卡、768 输入、每卡 batch 4、累积 4 次（有效 batch 64）、10 epoch，
+backbone/head 学习率分别为 2e-6/2e-5，保持 control 的 `box_projection` 训练范围
+（backbone、bbox projection、Scale），使用病灶单类模式，以 `lesion_AP50_95` 选择最佳权重。
+初始化路径为 `output/h72_hypotheses_20261009_10ep/train/control/best.pt`；
+加载时丢弃已删除的基础尺度 GN 参数，其余权重严格匹配，优化器和调度器重新开始。
+训练入口的 `--layer_decay` 默认值也已设为 0.9；历史脚本显式指定的值仍按各自参数执行。
+
+从 H72 最佳检测权重开始，使用轻量数据增强继续微调：
+
+```bash
+bash distill/det_vjepa/scripts/train_h72_aug.sh
+```
+
+脚本采用四卡、768 输入、每卡 batch 4、累积 4 次（有效 batch 64），训练 3 个完整
+epoch；backbone/head 学习率分别为 1e-6/1e-5，按完整 5,000 张验证集的
+lesion_AP50_95 选择 checkpoint。保留 H72 的 box_projection 训练范围：更新 backbone
+和回归输出层，冻结 neck 与其余 head。使用 `--init_weights`，重新建立优化器及调度器。
+可在脚本末尾追加参数覆盖设置，例如 `--exp_name h72_aug_trial2 --epochs 5 --cosine_epochs 5`。
+
+新增训练增强参数默认均为 0，旧命令保留原先的增强行为。脚本显式启用旋转 ±3°、
+平移 ±3%、缩放 0.9–1.1、亮度 ±0.08、对比度/Gamma 0.85–1.15、最多 0.01 标准差的
+共享通道高斯噪声、10% 概率的轻微 3×3 模糊，并保留 50% 水平翻转。
+几何变换同步更新框；任意正框裁剪后保留面积不足 90% 或边长不超过 1 像素时，
+放弃该次几何变换。验证集不应用增强。当前参数是待验证的微调起点，并非已取得提升的结果。
+
 ### 单卡
 
 ```bash
@@ -158,7 +191,7 @@ python -m distill.det_vjepa.train \
 | `--init_weights` | 空 | 从检测器 checkpoint 只加载模型权重，重新开始微调 |
 | `--lr_backbone` | 1e-5 | 主干最深层的学习率 |
 | `--lr_head` | 1e-4 | neck + head 的学习率 |
-| `--layer_decay` | 0.75 | 主干逐层衰减，第 i 层 = `lr_backbone × 0.75^(39-i)` |
+| `--layer_decay` | 0.9 | 主干逐层衰减，第 i 层 = `lr_backbone × 0.9^(39-i)`（block 编号从 0 开始） |
 | `--weight_decay` | 0.05 | 只作用于矩阵权重，norm/bias 不衰减 |
 | `--warmup_epochs` | 1.0 | 线性 warmup，之后 cosine 到 `1%` |
 | `--clip_grad` | 1.0 | 梯度裁剪 |

@@ -80,11 +80,22 @@ def paired_giou_loss(pred_xyxy, target_xyxy, weights=None, alpha=1.0):
     return (loss * weights).sum() / weights.sum().clamp(min=1e-6)
 
 
+def instance_balanced_weights(instance_ids, base_weights=None):
+    """Give each matched GT one unit of regression weight, across a whole batch."""
+    _, inverse, counts = torch.unique(instance_ids, return_inverse=True, return_counts=True)
+    if base_weights is None:
+        return counts[inverse].to(torch.float32).reciprocal()
+    totals = torch.zeros(len(counts), device=base_weights.device, dtype=base_weights.dtype)
+    totals.scatter_add_(0, inverse, base_weights)
+    return base_weights / totals[inverse].clamp(min=1e-6)
+
+
 class FCOSLoss(nn.Module):
     def __init__(self, fpn_strides=(8, 16, 32), center_radius=1.5,
                  focal_alpha=0.25, focal_gamma=2.0,
                  reg_weight=1.0, ctr_weight=1.0, reg_centerness_weighted=False,
-                 reg_l1_weight=0.0, reg_iou_alpha=1.0, ctr_target='centerness'):
+                 reg_l1_weight=0.0, reg_iou_alpha=1.0, ctr_target='centerness',
+                 reg_normalization='positive'):
         super().__init__()
         if ctr_target not in ('centerness', 'iou'):
             raise ValueError('ctr_target must be centerness or iou')
@@ -97,11 +108,14 @@ class FCOSLoss(nn.Module):
         self.reg_iou_alpha = reg_iou_alpha
         self.ctr_weight = ctr_weight
         self.ctr_target = ctr_target
+        if reg_normalization not in ('positive', 'gt'):
+            raise ValueError(f'unknown regression normalization: {reg_normalization}')
+        self.reg_normalization = reg_normalization
         self.reg_centerness_weighted = reg_centerness_weighted
         self.register_buffer('regress_ranges', regress_ranges_for(self.fpn_strides),
                              persistent=False)
 
-    def _match(self, points, ranges, radius, boxes, labels):
+    def _match(self, points, ranges, radius, boxes, labels, return_gt_ids=False):
         """
         Assign targets for one image.
 
@@ -114,8 +128,10 @@ class FCOSLoss(nn.Module):
         tgt_labels = torch.zeros(n, dtype=torch.long, device=points.device)
         tgt_dist = torch.zeros(n, 4, device=points.device)
         tgt_ctr = torch.zeros(n, device=points.device)
+        gt_ids = torch.full((n,), -1, dtype=torch.long, device=points.device) if return_gt_ids else None
         if boxes.numel() == 0:
-            return tgt_labels, tgt_dist, tgt_ctr
+            result = (tgt_labels, tgt_dist, tgt_ctr)
+            return result + (gt_ids,) if return_gt_ids else result
 
         areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
         # Descending area → the smallest overlapping box is assigned last and wins.
@@ -138,6 +154,8 @@ class FCOSLoss(nn.Module):
                 continue
 
             tgt_labels[positive] = int(labels[i]) + 1
+            if return_gt_ids:
+                gt_ids[positive] = i
             tgt_dist[positive] = dist[positive]
             # Centerness is only meaningful inside the box, where all four
             # distances are positive, so the sqrt below never sees a negative.
@@ -146,7 +164,8 @@ class FCOSLoss(nn.Module):
                 * (torch.minimum(top, bottom) / torch.maximum(top, bottom).clamp(min=1e-6))
             )
             tgt_ctr[positive] = centerness[positive]
-        return tgt_labels, tgt_dist, tgt_ctr
+        result = (tgt_labels, tgt_dist, tgt_ctr)
+        return result + (gt_ids,) if return_gt_ids else result
 
     def forward(self, head_out, targets, anchor_points, anchor_strides, anchor_levels):
         """
@@ -166,11 +185,13 @@ class FCOSLoss(nn.Module):
         ranges = self.regress_ranges.to(anchor_levels.device)[anchor_levels]
         radius = self.center_radius * anchor_strides.to(cls.device)
 
-        labels, dist_t, ctr_t = zip(*[
+        matched = list(zip(*[
             self._match(anchor_points.to(cls.device), ranges, radius,
-                        t['boxes'].to(cls.device), t['labels'].to(cls.device))
+                        t['boxes'].to(cls.device), t['labels'].to(cls.device),
+                        return_gt_ids=self.reg_normalization == 'gt')
             for t in targets
-        ])
+        ]))
+        labels, dist_t, ctr_t = matched[:3]
         labels = torch.stack(labels)
         dist_t = torch.stack(dist_t)
         ctr_t = torch.stack(ctr_t)
@@ -196,6 +217,12 @@ class FCOSLoss(nn.Module):
             pred_boxes = ltrb_to_xyxy(points, dist[positive] * strides)
             target_boxes = ltrb_to_xyxy(points, dist_t[positive])
             weights = ctr_t[positive] if self.reg_centerness_weighted else None
+            if self.reg_normalization == 'gt':
+                # Local GT ids must not collide across different batch images.
+                gt_ids = torch.stack(matched[3])
+                width = max(len(t['boxes']) for t in targets)
+                offsets = torch.arange(batch, device=cls.device).unsqueeze(1) * width
+                weights = instance_balanced_weights((gt_ids + offsets)[positive], weights)
             reg_loss = paired_giou_loss(pred_boxes, target_boxes, weights=weights,
                                         alpha=self.reg_iou_alpha)
             if self.reg_l1_weight:

@@ -37,14 +37,26 @@ EMBED_DIM = 1408
 VIT_G_DEPTH = 40
 
 
-def load_detector_weights(model, state_dict, lesion_only=False):
-    """Strict load; a two-class checkpoint can initialize a one-class lesion head."""
+def load_detector_weights(model, state_dict, lesion_only=False, allow_new_residual=False):
+    """Load detector weights, converting legacy base-level GN and class count."""
     state = dict(state_dict)
+    # Older detectors normalized the base-stride lateral after its 1x1 conv.
+    # That branch now contains only the conv; discard only its removed GN.
+    for index, stride in enumerate(model.neck.strides):
+        if stride == model.neck.base_stride and len(model.neck.laterals[index]) == 1:
+            for suffix in ('weight', 'bias'):
+                state.pop(f'neck.laterals.{index}.1.{suffix}', None)
     if lesion_only:
         for key in ('head.cls_logits.weight', 'head.cls_logits.bias'):
             if state[key].shape[0] not in (1, 2):
                 raise ValueError(f'{key}: expected 1 or 2 classes for lesion-only initialization')
             state[key] = state[key][:1]
+    if allow_new_residual and getattr(model.head, 'box_residual', None) is not None:
+        residual_keys = {k for k in model.state_dict() if k.startswith('head.box_residual.')}
+        present = residual_keys.intersection(state)
+        if not present:
+            # Only a wholly new residual may be initialized; every old key remains strict.
+            state.update({k: v for k, v in model.state_dict().items() if k in residual_keys})
     return model.load_state_dict(state, strict=True)
 
 
@@ -170,8 +182,7 @@ class SimpleFeaturePyramid(nn.Module):
                                nn.GroupNorm(32, hidden_dim), nn.GELU()]
                     d = hidden_dim
             elif s == base_stride:
-                layers = [nn.Conv2d(in_dim, hidden_dim, 1),
-                          nn.GroupNorm(32, hidden_dim), nn.GELU()]
+                layers = [nn.Conv2d(in_dim, hidden_dim, 1)]
             else:
                 ratio = base_stride // s
                 if ratio & (ratio - 1):
@@ -223,6 +234,39 @@ class Scale(nn.Module):
         return x * self.scale
 
 
+class BoxResidual(nn.Module):
+    """Zero-initialized P3 regression correction, from tokens or raw image detail."""
+
+    def __init__(self, in_channels, mode, width=32):
+        super().__init__()
+        self.mode = mode
+        if mode == 'image':
+            layers = []
+            for source in (3, width, width):
+                layers += [nn.Conv2d(source, width, 3, stride=2, padding=1),
+                           nn.GroupNorm(8, width), nn.GELU()]
+        elif mode == 'token':
+            layers = [nn.Conv2d(in_channels, width, 1), nn.GroupNorm(8, width), nn.GELU()]
+            for _ in range(2):
+                layers += [nn.Conv2d(width, width, 3, padding=1),
+                           nn.GroupNorm(8, width), nn.GELU()]
+        else:
+            raise ValueError(f'unknown box residual: {mode}')
+        self.local = nn.Sequential(*layers)
+        self.fuse = nn.Sequential(nn.Conv2d(in_channels + width, width, 1),
+                                  nn.GroupNorm(8, width), nn.GELU())
+        self.output = nn.Conv2d(width, 4, 3, padding=1)
+        nn.init.zeros_(self.output.weight)
+        nn.init.zeros_(self.output.bias)
+
+    def forward(self, reg_features, images):
+        local = self.local(images if self.mode == 'image' else reg_features)
+        if local.shape[-2:] != reg_features.shape[-2:]:
+            local = F.interpolate(local, size=reg_features.shape[-2:],
+                                  mode='bilinear', align_corners=False)
+        return self.output(self.fuse(torch.cat([reg_features, local], dim=1)))
+
+
 class FCOSHead(nn.Module):
     """
     Shared-weight FCOS head applied to every pyramid level.
@@ -261,10 +305,11 @@ class FCOSHead(nn.Module):
         # starts out predicting a box of one stride.
         nn.init.constant_(self.bbox_pred.bias, 1.0)
 
-    def forward(self, feats):
+    def forward(self, feats, images=None):
         cls_logits, bbox_pred, ctr_logits = [], [], []
         for level, x in enumerate(feats):
-            cls_logits.append(self.cls_logits(self.cls_tower(x)))
+            cls_input = x.detach() if getattr(self, 'backbone_gradient', 'all') == 'reg_only' else x
+            cls_logits.append(self.cls_logits(self.cls_tower(cls_input)))
 
             reg_feat = self.reg_tower(x)
             # Distances are in units of the level stride and decode() applies the
@@ -274,9 +319,14 @@ class FCOSHead(nn.Module):
             # to the clamp within a few dozen steps.  ReLU is bounded below by 0
             # and its bias starts positive (1.0 = a box of one stride), so no
             # unit is dead and the head starts from a sane box size.
-            dist = F.relu(self.bbox_pred(reg_feat))
+            raw_dist = self.bbox_pred(reg_feat)
+            if level == 0 and getattr(self, 'box_residual', None) is not None:
+                raw_dist = raw_dist + self.box_residual(reg_feat, images)
+            dist = F.relu(raw_dist)
             bbox_pred.append(self.scales[level](dist))
-            ctr_logits.append(self.centerness(reg_feat))
+            ctr_input = (reg_feat.detach() if getattr(self, 'backbone_gradient', 'all')
+                         in ('no_ctr', 'reg_only') else reg_feat)
+            ctr_logits.append(self.centerness(ctr_input))
         return cls_logits, bbox_pred, ctr_logits
 
 
@@ -298,7 +348,8 @@ class VJepaDetector(nn.Module):
     def __init__(self, num_classes, resolution=640, num_frames=2,
                  checkpoint=None, fpn_strides=(8, 16, 32), fpn_dim=256,
                  head_convs=4, drop_path=0.0, grad_checkpoint=True,
-                 out_layers=None, fpn_topdown_scale=1.0):
+                 out_layers=None, fpn_topdown_scale=1.0,
+                 backbone_gradient='all', box_residual='none'):
         super().__init__()
         self.num_classes = num_classes
         self.resolution = resolution
@@ -330,6 +381,13 @@ class VJepaDetector(nn.Module):
                                          base_stride=PATCH_SIZE,
                                          topdown_scale=fpn_topdown_scale)
         self.head = FCOSHead(num_classes, fpn_dim, head_convs, self.fpn_strides)
+        if backbone_gradient not in ('all', 'no_ctr', 'reg_only'):
+            raise ValueError(f'unknown backbone gradient route: {backbone_gradient}')
+        self.head.backbone_gradient = backbone_gradient
+        if box_residual != 'none':
+            if self.fpn_strides[0] != 8:
+                raise ValueError('box residual requires finest FPN stride 8')
+            self.head.box_residual = BoxResidual(fpn_dim, box_residual)
 
         # Anchor points / per-location stride — identical for every image at a
         # fixed resolution, so precompute once as registered buffers.
@@ -367,7 +425,7 @@ class VJepaDetector(nn.Module):
         return [to_map(x) for x in tokens]
 
     def forward(self, images):
-        return self.head(self.neck(self.extract_features(images)))
+        return self.head(self.neck(self.extract_features(images)), images=images)
 
     def decode(self, head_out):
         """
